@@ -131,38 +131,33 @@ def sample_for_prompt(pool, profile, per_cat=None):
     Third step the spec was missing: even after filtering, do not send the whole
     pool. Sample a diverse working set so the prompt stays small.
 
-    Protein slots are ordered so COMPLETE proteins (all nine essential amino
-    acids) come first. For non-vegan users the sample is therefore dominated by
-    complete sources. Vegans keep the full plant list - excluding incomplete
-    sources there would leave nothing to build from, and combining plant
-    proteins across a day covers the amino acid profile anyway.
+    Protein ordering, in priority order:
+      1. Whole foods before supplements. Whey is 78g protein to 5g fat - by
+         ratio alone it beats every whole food and would end up in every meal.
+         Powders sort last and at most one enters the sample.
+      2. Protein QUALITY (3 = meat/fish/egg/dairy, 2 = soy/quinoa,
+         1 = legumes/grains). Sorting on leanness alone put textured soy
+         protein ahead of chicken breast for omnivores.
+      3. Leanness, as the tiebreaker. Fat overshoot came from fatty protein
+         sources needed to hit a high protein target, not from the fat
+         category. Lean-first leaves room in the fat budget.
+
+    Vegans keep their full plant list - excluding lower-quality sources there
+    would leave nothing to build from, and combining plant proteins across a
+    day covers the amino acid profile anyway.
     """
     per_cat = per_cat or {"protein": 8, "carb": 6, "veg": 6, "fat": 4,
                           "fruit": 3, "drink": 2}
-    vegan = profile.get("diet") == "vegan"
     out = []
     for c, n in per_cat.items():
         items = [x for x in pool if x["cat"] == c]
         if c == "protein":
-            # Order by LEANNESS as well as completeness. Fat overshoot was
-            # coming from fatty protein sources (eggs, mozzarella) needed to
-            # hit a high protein target - not from the fat category at all.
-            # Sorting lean-first lets the solver reach protein without
-            # blowing the fat budget.
-            # Supplements are excluded from the leanness advantage. Whey is
-            # 78g protein to 5g fat - by ratio alone it beats every whole food
-            # and ends up in every meal. A menu that is half protein shakes is
-            # not a menu. Powders sort last and at most one enters the sample.
-            # Order: whole foods before supplements, then by protein QUALITY,
-            # then by leanness. Quality had to be added as its own dimension -
-            # sorting on leanness alone put textured soy protein ahead of
-            # chicken breast for omnivores, because its fat ratio is better.
             lean = lambda x: x["fat"] / max(x["protein"], 0.1)
             items.sort(key=lambda x: (x.get("supp", False),
-                                      -x.get("quality", 0), lean(x)))
+                                      -x.get("quality", 2), lean(x)))
             whole = [x for x in items if not x.get("supp")]
             supps = sorted([x for x in items if x.get("supp")],
-                           key=lambda x: -x.get("quality", 0))
+                           key=lambda x: -x.get("quality", 2))
             items = whole[:max(n - 1, 1)] + supps[:1]
         out.extend(items[:n])
     return out

@@ -14,7 +14,7 @@ price:  1 = cheap, 2 = mid, 3 = expensive
 """
 
 def F(name, he, cat, kcal, p, f, c, kosher, servings, allergens=(), tags=(),
-      prep=0, price=1, complete=False, supp=False, quality=0):
+      prep=0, price=1, complete=False, supp=False, quality=2):
     """
     complete=True -> all nine essential amino acids in useful amounts.
     quality: protein quality tier, roughly tracking biological value / DIAAS.

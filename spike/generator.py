@@ -30,8 +30,11 @@ Absolute rules:
 1. Use ONLY items from the provided list. Never invent an item.
 2. Every meal needs at least one protein source and one carb source, plus a
    vegetable where it fits. Add a fat source when the dish calls for it.
-   Prefer protein sources marked [complete] - they carry all nine essential
-   amino acids. Use incomplete sources as support, not as the main protein.
+   The main protein of every meal must be one marked "HIGH-QUALITY protein"
+   whenever the diet allows - meat, fish, eggs and dairy have the highest
+   biological value. Items marked "supporting protein" (legumes, grains,
+   seitan) are side players, never the centrepiece. On vegan profiles lead
+   with soy-based sources instead.
 3. For meals above ~700 kcal, include two protein or two carb sources so the
    solver has room to work - but they must be DIFFERENT kinds of food. Never
    put white rice and brown rice in the same meal, or two near-identical items.
@@ -62,7 +65,9 @@ def build_prompt(profile, day_targets, meal_targets, meal_names, pool):
         units = " / ".join(f"{lbl}={g}g" for lbl, g in f["servings"])
         lines.append(
             f"- \"{f['name']}\"  ({f['cat']}, {f['kosher']}"
-            f"{', complete' if f.get('complete') else ''}) per 100g: "
+            f"{', complete' if f.get('complete') else ''}"
+            f"{', HIGH-QUALITY protein' if f.get('quality') == 3 else ''}"
+            f"{', supporting protein' if f.get('quality') == 1 else ''}) per 100g: "
             f"{f['kcal']}kcal P{f['protein']} F{f['fat']} C{f['carb']} | {units}")
 
     per_meal = "\n".join(

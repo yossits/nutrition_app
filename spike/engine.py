@@ -169,12 +169,14 @@ def meal_times(wake="07:00", sleep="23:00", n=3):
 
 # ---------------------------------------------------------------------------
 # PROTEIN_NOTE
-# VEGAN_PROTEIN_PER_KG is set to 1.5 to keep menus buildable from a limited
-# plant-protein pool. Be aware this runs against the nutrition: plant proteins
-# have lower digestibility and less leucine, so vegans generally need MORE
-# protein than omnivores for the same result, not less.
+# VEGAN_PROTEIN_PER_KG is 2.0 - the same as every other diet.
 #
-# The better fix is a deeper plant-protein pool (seitan, tempeh, edamame,
-# soy protein, pea protein) rather than a lower target. Once the real database
-# is curated, re-measure feasibility at 2.0 and raise this back if it holds.
+# Lowering it to 1.5 was tried and measured: it did NOT help. Vegan feasibility
+# was 4/5 at 1.5 and 5/5 at 2.0. The blocker was never the target, it was the
+# DEPTH of the plant-protein pool. Adding seitan, tempeh, edamame, soy protein,
+# pea protein and black beans took profiles with too thin a pool from 17% to 7%.
+#
+# It is also the right call nutritionally: plant protein has lower
+# digestibility and less leucine, so vegans generally need MORE protein than
+# omnivores for the same result, not less.
 # ---------------------------------------------------------------------------

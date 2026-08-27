@@ -1,0 +1,3 @@
+# The spike deliberately has almost no dependencies - everything except the
+# API call is plain Python. Keep it that way for as long as possible.
+requests>=2.31.0

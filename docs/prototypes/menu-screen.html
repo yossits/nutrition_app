@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מסך התפריט — אב טיפוס</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EAE8DE;
+    --card:#FBFAF6;
+    --ink:#2C3327;
+    --ink-soft:#5A6B4A;
+    --muted:#8A8A7C;
+    --olive:#7C8F4E;
+    --olive-pale:#C9D0B4;
+    --plum:#4A2C42;
+    --plum-lit:#6B3D5E;
+    --line:#D6D3C6;
+    --shadow:0 1px 2px rgba(44,51,39,.06), 0 8px 24px rgba(44,51,39,.07);
+    --display:'Frank Ruhl Libre','David',serif;
+    --body:'Heebo','Arial Hebrew',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--paper);
+    font-family:var(--body);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    display:flex;justify-content:center;
+    padding:28px 16px 60px;
+  }
+  .phone{
+    width:100%;max-width:400px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:20px 18px 28px;
+    box-shadow:var(--shadow);
+  }
+
+  /* ---------- header ---------- */
+  .bar{display:flex;justify-content:space-between;align-items:center;
+       font-size:12px;letter-spacing:.04em;color:var(--muted);margin-bottom:22px}
+  .bar .menu{display:flex;flex-direction:column;gap:3px}
+  .bar .menu i{display:block;width:16px;height:1.5px;background:var(--ink-soft)}
+  .bar .menu i:last-child{width:10px}
+
+  h1{font-family:var(--display);font-weight:900;font-size:31px;line-height:1.1;
+     letter-spacing:-.01em;margin-bottom:5px}
+  .sub{font-size:13px;color:var(--muted);font-weight:300;margin-bottom:22px}
+
+  /* ---------- signature: measurement ledger ---------- */
+  .ledger{
+    background:var(--ink);color:var(--card);
+    border-radius:16px;padding:18px 18px 16px;margin-bottom:30px;
+  }
+  .ledger-top{display:flex;justify-content:space-between;align-items:baseline;
+              margin-bottom:16px}
+  .ledger-top span{font-size:11px;letter-spacing:.14em;color:var(--olive-pale);
+                   font-weight:500}
+  .ledger-top em{font-style:normal;font-size:11px;color:#9AA38C;font-weight:300}
+  .row{margin-bottom:14px}
+  .row:last-child{margin-bottom:0}
+  .row-head{display:flex;justify-content:space-between;align-items:baseline;
+            margin-bottom:7px}
+  .row-head b{font-weight:400;font-size:13px;color:#D8DCCC}
+  .row-head .val{font-family:var(--body);font-variant-numeric:tabular-nums}
+  .row-head .val strong{font-weight:700;font-size:17px;color:var(--card)}
+  .row-head .val small{font-weight:300;font-size:12px;color:#8B9480}
+
+  /* segmented measuring gauge */
+  .gauge{display:flex;gap:3px;align-items:flex-end;height:15px}
+  .gauge i{flex:1;background:#414A3A;border-radius:1px;height:8px;display:block}
+  .gauge i.tall{height:15px}
+  .gauge i.on{background:var(--olive)}
+  .gauge i.on.tall{background:var(--olive-pale)}
+
+  /* ---------- meals ---------- */
+  .slot{margin-bottom:26px}
+  .eyebrow{display:flex;align-items:center;gap:9px;margin-bottom:9px;padding-inline-start:2px}
+  .eyebrow time{font-size:12px;font-weight:500;color:var(--ink-soft);
+                font-variant-numeric:tabular-nums;letter-spacing:.03em}
+  .eyebrow hr{flex:1;border:0;border-top:1px solid var(--line)}
+
+  .meal{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:17px 17px 14px;position:relative;
+  }
+  .meal.done{border-color:var(--olive-pale);background:#F6F7EF}
+  .meal h2{font-family:var(--display);font-weight:700;font-size:20px;
+           margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .tick{width:17px;height:17px;border-radius:50%;background:var(--olive);
+        display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .tick svg{width:9px;height:9px}
+
+  ul{list-style:none}
+  li{font-size:14.5px;font-weight:300;line-height:1.55;color:#3C4436;
+     padding-inline-start:15px;position:relative}
+  li::before{content:'';position:absolute;inset-inline-start:0;top:.72em;
+             width:5px;height:5px;border-radius:50%;background:var(--olive-pale)}
+
+  .macros{display:flex;gap:14px;margin-top:13px;padding-top:11px;
+          border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);
+          font-variant-numeric:tabular-nums}
+  .macros b{font-weight:500;color:var(--ink-soft)}
+
+  .acts{display:flex;gap:8px;margin-top:12px}
+  .btn{flex:1;border:1px solid var(--line);background:transparent;border-radius:9px;
+       padding:9px;font-family:var(--body);font-size:13px;font-weight:500;
+       color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;
+       justify-content:center;gap:6px}
+  .btn.filled{background:var(--olive);border-color:var(--olive);color:#fff}
+  .btn.lock{color:var(--plum-lit);border-color:#DCCEDA;background:#FAF5F9}
+  .btn svg{width:12px;height:12px;flex:none}
+
+  /* signature: the alternatives you can see but can't reach */
+  .peek{margin-top:-1px;padding-inline:12px}
+  .peek .lip{height:9px;background:var(--card);border:1px solid var(--line);
+             border-top:0;border-radius:0 0 12px 12px;opacity:.72;filter:blur(.6px)}
+  .peek .lip.two{margin-inline:11px;height:7px;opacity:.42;filter:blur(1.4px)}
+  .peek .cap{text-align:center;font-size:11px;color:var(--plum-lit);
+             margin-top:8px;font-weight:400;letter-spacing:.02em;
+             display:flex;align-items:center;justify-content:center;gap:5px}
+  .peek .cap svg{width:10px;height:10px}
+
+  /* ---------- upsell ---------- */
+  .upsell{background:var(--plum);color:#F3E9F0;border-radius:16px;
+          padding:20px 18px;margin-top:32px}
+  .upsell h3{font-family:var(--display);font-weight:700;font-size:20px;
+             margin-bottom:6px;color:#fff}
+  .upsell p{font-size:13px;font-weight:300;line-height:1.5;color:#CDB8C7;
+            margin-bottom:15px}
+  .adds{display:flex;flex-direction:column;gap:9px;margin-bottom:17px}
+  .add{display:flex;justify-content:space-between;align-items:center;
+       font-size:13.5px;font-weight:300;padding-bottom:9px;
+       border-bottom:1px solid rgba(255,255,255,.11)}
+  .add:last-child{border:0;padding-bottom:0}
+  .add span{font-variant-numeric:tabular-nums;font-weight:500;color:#E4CFDE;
+            font-size:12.5px;white-space:nowrap;padding-inline-start:12px}
+  .cta{width:100%;background:#F3E9F0;color:var(--plum);border:0;border-radius:10px;
+       padding:13px;font-family:var(--body);font-weight:700;font-size:14.5px;
+       cursor:pointer}
+
+  .foot{text-align:center;font-size:10.5px;color:var(--muted);font-weight:300;
+        margin-top:22px;line-height:1.6}
+
+  @media (prefers-reduced-motion:no-preference){
+    .btn,.cta{transition:opacity .15s ease}
+    .btn:hover,.cta:hover{opacity:.82}
+  }
+  .btn:focus-visible,.cta:focus-visible{outline:2px solid var(--plum-lit);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="bar">
+    <span>יום ג׳ · 26 באוגוסט</span>
+    <span class="menu" role="img" aria-label="תפריט"><i></i><i></i><i></i></span>
+  </div>
+
+  <h1>התפריט של היום</h1>
+  <p class="sub">יום 12 בתוכנית · ירידה בשומן · 2,100 קק״ל</p>
+
+  <!-- ============ המאזן היומי ============ -->
+  <div class="ledger">
+    <div class="ledger-top">
+      <span>המאזן היומי</span>
+      <em>נותרו 2 ארוחות</em>
+    </div>
+
+    <div class="row">
+      <div class="row-head">
+        <b>קלוריות</b>
+        <div class="val"><strong>640</strong> <small>/ 2,100</small></div>
+      </div>
+      <div class="gauge" role="img" aria-label="640 מתוך 2,100 קלוריות">
+        <i class="on tall"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+        <i class="on"></i><i class="on tall"></i><i class="on"></i><i></i>
+        <i></i><i></i><i class="tall"></i><i></i><i></i><i></i><i></i>
+        <i class="tall"></i><i></i><i></i><i></i><i></i><i class="tall"></i>
+        <i></i><i></i><i></i>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-head">
+        <b>חלבון</b>
+        <div class="val"><strong>52</strong> <small>/ 165 ג׳</small></div>
+      </div>
+      <div class="gauge" role="img" aria-label="52 מתוך 165 גרם חלבון">
+        <i class="on tall"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+        <i class="on"></i><i class="on tall"></i><i class="on"></i><i class="on"></i>
+        <i></i><i></i><i class="tall"></i><i></i><i></i><i></i><i></i>
+        <i class="tall"></i><i></i><i></i><i></i><i></i><i class="tall"></i>
+        <i></i><i></i><i></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ בוקר ============ -->
+  <div class="slot">
+    <div class="eyebrow"><time>07:30</time><hr></div>
+    <div class="meal done">
+      <h2>
+        <span class="tick"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        ארוחת בוקר
+      </h2>
+      <ul>
+        <li>חביתת 3 ביצים בכף שמן זית</li>
+        <li>2 פרוסות לחם מלא</li>
+        <li>גביע קוטג׳ 5% (250 ג׳)</li>
+        <li>מלפפון ועגבנייה</li>
+      </ul>
+      <div class="macros"><b>640</b> קק״ל<span>·</span><b>52 ג׳</b> חלבון</div>
+    </div>
+  </div>
+
+  <!-- ============ צהריים ============ -->
+  <div class="slot">
+    <div class="eyebrow"><time>13:30</time><hr></div>
+    <div class="meal">
+      <h2>ארוחת צהריים</h2>
+      <ul>
+        <li>חזה עוף בגריל (200 ג׳)</li>
+        <li>כוס אורז מבושל</li>
+        <li>חצי אבוקדו</li>
+        <li>סלט ירקות בכף שמן זית</li>
+      </ul>
+      <div class="macros"><b>780</b> קק״ל<span>·</span><b>62 ג׳</b> חלבון</div>
+      <div class="acts">
+        <button class="btn filled">סמן שאכלתי</button>
+        <button class="btn lock">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="2.4" y="5.2" width="7.2" height="5.4" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M4.2 5.2V3.9a1.8 1.8 0 0 1 3.6 0v1.3" stroke="currentColor" stroke-width="1.3"/></svg>
+          החלף מנה
+        </button>
+      </div>
+    </div>
+    <div class="peek">
+      <div class="lip"></div>
+      <div class="lip two"></div>
+      <div class="cap">
+        <svg viewBox="0 0 12 12" fill="none"><rect x="2.4" y="5.2" width="7.2" height="5.4" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M4.2 5.2V3.9a1.8 1.8 0 0 1 3.6 0v1.3" stroke="currentColor" stroke-width="1.3"/></svg>
+        2 חלופות שקולות לארוחה הזו
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ערב ============ -->
+  <div class="slot">
+    <div class="eyebrow"><time>19:30</time><hr></div>
+    <div class="meal">
+      <h2>ארוחת ערב</h2>
+      <ul>
+        <li>קופסת טונה במים</li>
+        <li>בטטה בינונית בתנור</li>
+        <li>2 כפות טחינה גולמית</li>
+        <li>סלט ירקות</li>
+      </ul>
+      <div class="macros"><b>680</b> קק״ל<span>·</span><b>51 ג׳</b> חלבון</div>
+      <div class="acts">
+        <button class="btn filled">סמן שאכלתי</button>
+        <button class="btn lock">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="2.4" y="5.2" width="7.2" height="5.4" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M4.2 5.2V3.9a1.8 1.8 0 0 1 3.6 0v1.3" stroke="currentColor" stroke-width="1.3"/></svg>
+          החלף מנה
+        </button>
+      </div>
+    </div>
+    <div class="peek">
+      <div class="lip"></div>
+      <div class="lip two"></div>
+      <div class="cap">
+        <svg viewBox="0 0 12 12" fill="none"><rect x="2.4" y="5.2" width="7.2" height="5.4" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M4.2 5.2V3.9a1.8 1.8 0 0 1 3.6 0v1.3" stroke="currentColor" stroke-width="1.3"/></svg>
+        2 חלופות שקולות לארוחה הזו
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ שדרוג ============ -->
+  <div class="upsell">
+    <h3>לפתוח את החלופות</h3>
+    <p>אותם יעדים בדיוק, יותר דרכים להגיע אליהם. כל חלופה שקולה בקלוריות ובחלבון למנה המקורית.</p>
+    <div class="adds">
+      <div class="add">3 אפשרויות בחירה בכל ארוחה <span>29 ₪ לחודש</span></div>
+      <div class="add">רשימת קניות שבועית <span>15 ₪ לחודש</span></div>
+      <div class="add">תפריט שבועי מראש <span>19 ₪ לחודש</span></div>
+      <div class="add">כל התוספות יחד <span>49 ₪ לחודש</span></div>
+    </div>
+    <button class="cta">שדרוג התוכנית</button>
+  </div>
+
+  <p class="foot">התפריט נבנה על בסיס הפרופיל שלך ומתעדכן אחרי כל שקילה.<br>אינו תחליף לייעוץ רפואי או תזונתי מקצועי.</p>
+
+</div>
+</body>
+</html>

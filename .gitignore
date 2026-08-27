@@ -1,0 +1,57 @@
+# ---------------------------------------------------------------------------
+# SECRETS - never commit these. An API key pushed to GitHub is scraped within
+# minutes by bots that watch the public event stream.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+*.env
+secrets.json
+credentials.json
+*.key
+*.pem
+api_key*
+ANTHROPIC_API_KEY*
+
+# ---------------------------------------------------------------------------
+# Generated output
+# ---------------------------------------------------------------------------
+menus.html
+spike_output.txt
+*.log
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---------------------------------------------------------------------------
+# Data - the Ministry of Health import lands here and is large
+# ---------------------------------------------------------------------------
+data/raw/
+data/*.xlsx
+data/*.csv
+*.db
+*.sqlite3
+
+# ---------------------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

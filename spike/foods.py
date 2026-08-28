@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Seed food database - sample of the curated `menu_eligible` set.
+Seed food database - 63 items written by hand during the spike (stage A).
 Values are per 100g. Each food carries natural serving units.
+
+NOT an export. There is no pipeline from the production `foods` table into
+this file, and no source_code here to join on. The kcal values are declared
+USDA energy - the equivalent of foods.kcal_source, not the derived foods.kcal.
+There is no fibre column, so the derivation cannot be applied here either.
+A change to the production database is invisible to this file.
+
+The real export will be generated from v_menu_foods once there is curation
+to export. v_menu_foods is empty today.
 
 NOTE: display names are English so terminal output is readable.
       The production Hebrew name is kept in the `he` field - switching

@@ -71,6 +71,8 @@
 | מפתח API | צד שרת בלבד, דרך Edge Function | `spec/09-architecture.md` |
 | Backend | Supabase — Postgres + Auth + Edge Functions + RLS | `spec/09-architecture.md` |
 | היסטוריית פרופיל | append-only. עדכון = שורה חדשה, לא דריסה | `spec/09-architecture.md` |
+| RLS במאגר המזון | חמש טבלאות המזון: `SELECT` בלבד ל-`anon`. ארבע טבלאות `src_*`: RLS פעיל בלי מדיניות, רק `service_role` | `spec/09-architecture.md` |
+| סביבת ייצור | פרויקט Supabase נפרד `nutrition-app` (פרנקפורט), לא בתוך `ytdigitallab`. הפרדה מתיקון 13 ומ-`auth.users` משותף | `spec/08-legal.md` |
 
 ## תיעוד ותהליך
 

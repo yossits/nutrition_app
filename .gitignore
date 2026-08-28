@@ -18,6 +18,7 @@ ANTHROPIC_API_KEY*
 menus.html
 spike_output.txt
 *.log
+db/*_report.txt
 
 # ---------------------------------------------------------------------------
 # Python

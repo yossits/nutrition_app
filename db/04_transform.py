@@ -6,9 +6,11 @@ Run after 03_load_source.py. Re-runnable: drops and rebuilds
 nutrients · foods · food_servings · food_nutrients · food_recipe_components.
 The src_* tables are left untouched.
 
-Run:
-  cmd:         set DATABASE_URL=postgresql://postgres:<password>@localhost:5432/nutrition
-  PowerShell:  $env:DATABASE_URL = "postgresql://postgres:<password>@localhost:5432/nutrition"
+Run. The connection is the Supabase session pooler — the direct host is IPv6
+only, and the local Docker Postgres this once pointed at was abandoned before
+the import ever ran:
+  cmd:         set DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+  PowerShell:  $env:DATABASE_URL = "postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
   python db\\04_transform.py
 
 What goes where:
@@ -17,6 +19,10 @@ What goes where:
                      official dictionary
   food_servings    — serving units, excluding 700 (gram) and 2000 (kilogram)
   food_recipe_components — recipe composition, in grams
+  foods.kcal_source — the file's declared food_energy, kept as-is
+  foods.kcal       — derived from the macros, once foods is populated. The file
+                     value and the macro sum disagree by up to 24%; the solver
+                     needs one consistent number. See db/05_derive_kcal.sql
   foods.complete   — derived from the nine essential amino acids, once
                      food_nutrients is populated
 
@@ -113,7 +119,7 @@ STEPS = [
     ("foods — entries with all four macros present", f"""
         INSERT INTO foods (source_code, class_code, makor, source,
                            name_he, name_en,
-                           kcal, protein_g, fat_g, carb_g,
+                           kcal_source, protein_g, fat_g, carb_g,
                            fiber_g, sugar_g, sat_fat_g, sodium_mg)
         SELECT
             sf.code,
@@ -173,6 +179,51 @@ STEPS = [
         JOIN foods c ON c.source_code = rc.component_code
         GROUP BY r.id, c.id"""),
 
+    # Must run after food_nutrients — ethanol is read from there. Like
+    # `complete`, and for the same reason. It must also be a step and not a
+    # one-off fix in production: the omission on `complete` left a hand-patched
+    # column that the next run would have silently reverted.
+    #
+    # P*4 + F*9 + available carbohydrate*4 + fibre*2 + ethanol*7 — the
+    # coefficients Israeli food labelling is regulated by. Ethanol sits in no
+    # macro field; without its term a bottle of gin derives to 0 kcal against a
+    # declared 263. It is looked up by nutrients.code, never by a hardcoded id,
+    # because the id moves if nutrients is reseeded.
+    #
+    # COALESCE(fiber_g, 0) touches 384 items whose fibre is NULL rather than 0;
+    # decided provisionally in favour of zero, see docs/open-questions.md.
+    #
+    # The NULL rule: an item that declares calories but carries no macro base at
+    # all has nothing to derive from. Writing 0 there would be a silent failure —
+    # sucralose tablets declaring 390 kcal would read as free. NULL fails loudly
+    # instead. Catches exactly two rows, 8703 and 9740; the genuinely zero items
+    # (water, salt, 0-kcal sweeteners) are not caught, their kcal_source is 0.
+    #
+    # kcal_source is never touched.
+    ("foods.kcal — derived from the macros, ethanol included", """
+        UPDATE foods f
+        SET kcal = src.kcal
+        FROM (
+            SELECT f2.id,
+                   CASE
+                     WHEN f2.kcal_source > 0
+                      AND f2.protein_g = 0
+                      AND f2.fat_g     = 0
+                      AND f2.carb_g    = 0
+                      AND COALESCE(f2.fiber_g,0)  = 0
+                      AND COALESCE(al.value,0)    = 0
+                     THEN NULL
+                     ELSE ROUND(f2.protein_g*4 + f2.fat_g*9 + f2.carb_g*4
+                              + COALESCE(f2.fiber_g,0)*2
+                              + COALESCE(al.value,0)*7, 1)
+                   END AS kcal
+            FROM foods f2
+            LEFT JOIN food_nutrients al
+                   ON al.food_id = f2.id
+                  AND al.nutrient_id = (SELECT id FROM nutrients WHERE code = 'alcohol')
+        ) src
+        WHERE f.id = src.id"""),
+
     # Must stay last: it reads food_nutrients, which the step above populates.
     # TRUNCATE already reset the column to its DEFAULT false, so setting only
     # the true rows is enough.
@@ -197,6 +248,45 @@ CHECKS = [
     ("Distribution of derived source against makor", """
         SELECT source, makor, count(*) n
         FROM foods GROUP BY 1, 2 ORDER BY 1 NULLS LAST, 2"""),
+
+    # zero_but_caloric is the one to read: an item declaring calories that
+    # derived to 0 means energy the formula cannot see. It must be 0 — the two
+    # such items are caught by the NULL rule instead. A plain `kcal <= 0` count
+    # is the wrong test; it flags water and salt, where 0 is the right answer.
+    #
+    # Stop conditions: negative > 0, zero_but_caloric > 0, or derived_null <> 2.
+    ("kcal derivation — expected: derived_null 2 · negative 0 · zero_but_caloric 0", """
+        SELECT count(*) AS total,
+               count(kcal_source)                                    AS with_source,
+               count(kcal)                                           AS with_derived,
+               count(*) FILTER (WHERE kcal IS NULL)                  AS derived_null,
+               count(*) FILTER (WHERE kcal < 0)                      AS negative,
+               count(*) FILTER (WHERE kcal <= 0 AND kcal_source > 0) AS zero_but_caloric,
+               ROUND((percentile_cont(0.5) WITHIN GROUP (
+                 ORDER BY abs(kcal-kcal_source)/NULLIF(kcal_source,0))*100)::numeric,2)
+                                                                     AS median_dev_pct
+        FROM foods"""),
+
+    # Which rows the NULL rule caught, and why. The macros are NOT NULL on
+    # foods, so a NULL kcal can only come from the rule or from the step never
+    # having run at all — the check the `complete` bug lacked.
+    ("kcal IS NULL — declared calories with no macro base to derive from", """
+        SELECT source_code, name_he, kcal_source
+        FROM foods WHERE kcal IS NULL ORDER BY kcal_source DESC"""),
+
+    # If this is 0, the ethanol term silently did nothing — most likely because
+    # nutrients has no row with code 'alcohol' and the lookup matched nothing.
+    ("Ethanol term — rows where alcohol contributes. 0 here means the lookup failed", """
+        SELECT count(*) AS rows_with_alcohol,
+               ROUND(max(fn.value),1) AS max_g_per_100g
+        FROM food_nutrients fn
+        JOIN nutrients n ON n.id = fn.nutrient_id
+        WHERE n.code = 'alcohol' AND fn.value > 0"""),
+
+    ("Atwater outliers — the curation gate. eligible must stay 0 until each is ruled on", """
+        SELECT count(*) AS outliers,
+               count(*) FILTER (WHERE menu_eligible) AS eligible
+        FROM v_kcal_outliers"""),
 
     ("Complete proteins — 2,758 of 4,620 expected", """
         SELECT count(*) FILTER (WHERE complete)     AS complete,

@@ -94,14 +94,20 @@ CREATE TABLE foods (
     name_en     text,
 
     -- Values per 100 g ------------------------------------------------------
-    kcal      numeric NOT NULL CHECK (kcal      >= 0),
-    protein_g numeric NOT NULL CHECK (protein_g >= 0),
-    fat_g     numeric NOT NULL CHECK (fat_g     >= 0),
-    carb_g    numeric NOT NULL CHECK (carb_g    >= 0),
-    fiber_g   numeric,
-    sugar_g   numeric,
-    sat_fat_g numeric,
-    sodium_mg numeric,
+    -- Two calorie fields because the file's energy and the macro sum disagree by
+    -- up to 24%, and the solver needs one number that its macro targets agree with.
+    -- kcal is nullable on purpose: a derivation that never ran must read NULL, not
+    -- a stale file value that looks fine. Derived in 04_transform.py, after
+    -- food_nutrients — the ethanol term is read from there.
+    kcal_source numeric,                             -- the file's value, as-is. Never overwritten
+    kcal        numeric CHECK (kcal        >= 0),    -- derived: P*4 + F*9 + C*4 + fibre*2 + ethanol*7
+    protein_g   numeric NOT NULL CHECK (protein_g >= 0),
+    fat_g       numeric NOT NULL CHECK (fat_g     >= 0),
+    carb_g      numeric NOT NULL CHECK (carb_g    >= 0),
+    fiber_g     numeric,
+    sugar_g     numeric,
+    sat_fat_g   numeric,
+    sodium_mg   numeric,
 
     -- Curation fields — none of these exist in the source --------------------
     category              food_category,
@@ -239,6 +245,65 @@ GROUP BY category
 ORDER BY category;
 
 
+-- The Atwater curation gate — the third validator, alongside
+-- v_eligible_missing_tags and v_pool_depth.
+--
+-- The file's declared energy and the derived kcal disagree for three known
+-- reasons: dietary fibre (carb_g is available carbohydrate, the label counts
+-- fibre too), polyols and sucralose-bulked sweeteners (energy the macros
+-- overstate), and ethanol (7 kcal/g, which sits in no macro field at all).
+--
+-- Two thresholds, both required. 12% relative catches the real disagreements;
+-- the absolute 5 kcal floor keeps every 6-kcal diet drink from flooding the
+-- list on rounding alone.
+--
+-- This is NOT a CHECK constraint. Some items land here and are still correct
+-- (sugar-free products). An item that appears here does not get menu_eligible
+-- until a human has ruled on it — a curation decision, not an automatic block.
+CREATE OR REPLACE VIEW v_kcal_outliers AS
+SELECT id, source_code, name_he, makor, category, menu_eligible,
+       kcal_source, kcal,
+       ROUND(((kcal - kcal_source) / NULLIF(kcal_source,0) * 100)::numeric, 1) AS dev_pct,
+       CASE
+         WHEN kcal > kcal_source  THEN 'עודף — חשד לפוליאולים או כוהל'
+         WHEN fiber_g IS NULL     THEN 'חוסר — סיבים לא ידועים'
+         ELSE                          'חוסר — לא מוסבר'
+       END AS suspected
+FROM foods
+WHERE kcal_source > 0
+  AND kcal IS NOT NULL
+  AND abs(kcal - kcal_source) / kcal_source > 0.12
+  AND abs(kcal - kcal_source) >= 5
+ORDER BY menu_eligible DESC, abs(kcal - kcal_source) / kcal_source DESC;
+
+
+-- A view carries no RLS of its own and runs as its owner, so a view granted to
+-- anon reads and writes straight past the policies on the tables underneath it.
+-- Supabase grants anon full DML on new objects by default, and a single-table
+-- view like v_eligible_missing_tags is auto-updatable — which made DELETE
+-- through the view a live path into foods with the public anon key.
+--
+-- security_invoker makes each view honour the caller's own RLS; the
+-- REVOKE/GRANT pair leaves nothing but SELECT. This block must stay in this
+-- file: applied to production only, the next run of the schema would recreate
+-- all five views wide open again.
+DO $$
+DECLARE v text;
+BEGIN
+  FOREACH v IN ARRAY ARRAY[
+      'v_eligible_missing_tags',
+      'v_recipe_unreviewed_components',
+      'v_recipe_inherited_allergens',
+      'v_pool_depth',
+      'v_kcal_outliers'
+  ] LOOP
+      EXECUTE format('ALTER VIEW %I SET (security_invoker = on)', v);
+      EXECUTE format('REVOKE ALL ON %I FROM anon, authenticated', v);
+      EXECUTE format('GRANT SELECT ON %I TO anon, authenticated', v);
+  END LOOP;
+END $$;
+
+
 -- ============================================================================
 --  4. Maintenance
 -- ============================================================================
@@ -257,7 +322,26 @@ CREATE TRIGGER foods_touch_updated_at
 COMMIT;
 
 -- ============================================================================
---  A note on RLS: foods · food_servings · food_nutrients · nutrients are
---  public reference data, with no personal information. RLS is enabled only
---  on the tables in spec §13.3 that carry user data.
+--  A note on RLS. The view grants above are in this file; the table policies
+--  below are not — they were applied to production separately and are recorded
+--  here so the gap is visible. What is in place there:
+--
+--    foods · food_servings · food_nutrients · food_recipe_components ·
+--    nutrients          RLS on, one SELECT policy for anon + authenticated.
+--                       Public reference data — public to read is not public
+--                       to write, and on Supabase anon holds full DML GRANTs
+--                       by default, so RLS is what actually blocks writes.
+--
+--    src_foods · src_recipe_components · src_servings · src_mida
+--                       RLS on, no policy at all — service_role only. This is
+--                       the layer the import scripts TRUNCATE.
+--
+--    the v_* views      Views carry no RLS of their own. They run as their
+--                       owner, so a view granted to anon is a hole straight
+--                       past the policies above. Set security_invoker = on and
+--                       granted SELECT only — by the block in section 3, so a
+--                       rebuild cannot reopen them.
+--
+--  Verified against production 28.08.2026: no view reads from any src_* table,
+--  so security_invoker cannot silently empty one for anon.
 -- ============================================================================

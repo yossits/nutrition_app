@@ -16,8 +16,8 @@ What it does not do:
   step 04, separate.
 
 Run (from the repo root):
-  cmd:         set DATABASE_URL=postgresql://postgres:<password>@localhost:5432/nutrition
-  PowerShell:  $env:DATABASE_URL = "postgresql://postgres:<password>@localhost:5432/nutrition"
+  cmd:         set DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+  PowerShell:  $env:DATABASE_URL = "postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
   python db\\03_load_source.py
 
 Files are identified by their headers:
@@ -214,8 +214,8 @@ def main():
     url = os.environ.get("DATABASE_URL")
     if not url:
         sys.exit("DATABASE_URL is missing. For example:\n"
-                 "  cmd:         set DATABASE_URL=postgresql://postgres:<password>@localhost:5432/nutrition\n"
-                 "  PowerShell:  $env:DATABASE_URL = \"postgresql://postgres:<password>@localhost:5432/nutrition\"")
+                 "  cmd:         set DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres\n"
+                 "  PowerShell:  $env:DATABASE_URL = \"postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres\"")
 
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "source"
     files = sorted(p for p in src.glob("*.csv"))

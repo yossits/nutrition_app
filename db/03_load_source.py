@@ -15,9 +15,14 @@ What it does not do:
   Does not touch the core tables (foods and friends). That is the transform —
   step 04, separate.
 
-Run (from the repo root):
-  cmd:         set DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
-  PowerShell:  $env:DATABASE_URL = "postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+Run (from the repo root).
+DATABASE_URL is the Supabase session pooler string; the direct host,
+db.<ref>.supabase.co, resolves to IPv6 only. The user is postgres.<ref>,
+not plain postgres, and the port is 5432 — not the 6543 transaction pooler,
+which does not hold psycopg's prepared statements.
+
+  $env:DATABASE_URL =
+      "postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
   python db\\03_load_source.py
 
 Files are identified by their headers:
@@ -213,9 +218,9 @@ def run_checks(cur, out):
 def main():
     url = os.environ.get("DATABASE_URL")
     if not url:
-        sys.exit("DATABASE_URL is missing. For example:\n"
-                 "  cmd:         set DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres\n"
-                 "  PowerShell:  $env:DATABASE_URL = \"postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres\"")
+        sys.exit("DATABASE_URL is missing. The session pooler string:\n"
+                 '  $env:DATABASE_URL = "postgresql://postgres.<ref>:<password>'
+                 '@aws-0-<region>.pooler.supabase.com:5432/postgres"')
 
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "source"
     files = sorted(p for p in src.glob("*.csv"))

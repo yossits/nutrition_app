@@ -6,11 +6,14 @@ Run after 03_load_source.py. Re-runnable: drops and rebuilds
 nutrients · foods · food_servings · food_nutrients · food_recipe_components.
 The src_* tables are left untouched.
 
-Run. The connection is the Supabase session pooler — the direct host is IPv6
-only, and the local Docker Postgres this once pointed at was abandoned before
-the import ever ran:
-  cmd:         set DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
-  PowerShell:  $env:DATABASE_URL = "postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+Run.
+DATABASE_URL is the Supabase session pooler string; the direct host,
+db.<ref>.supabase.co, resolves to IPv6 only. The user is postgres.<ref>,
+not plain postgres, and the port is 5432 — not the 6543 transaction pooler,
+which does not hold psycopg's prepared statements.
+
+  $env:DATABASE_URL =
+      "postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
   python db\\04_transform.py
 
 What goes where:

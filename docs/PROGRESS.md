@@ -1,13 +1,13 @@
 # מצב העבודה
 
-**עודכן:** 27.08.2026
+**עודכן:** 28.08.2026
 **זהו הקובץ היחיד שמתאר מה נעשה ומה נשאר.** אם משהו סותר אותו — הוא צודק.
 
 ---
 
 ## 📍 אתה כאן
 
-**שלב ב' — ייבוא מאגר משרד הבריאות.** ממתין להורדת שמונת הקבצים מ-data.gov.il.
+**שלב ב' — ייבוא מאגר משרד הבריאות.** הייבוא המכני הסתיים והמאגר טעון בייצור ב-Supabase. הצוואר עבר לאצירה ולתיוג — זו העבודה האמיתית, והיא עוד לא התחילה.
 
 ---
 
@@ -58,16 +58,29 @@
 
 - [x] אותרו שמונת הקבצים ב-data.gov.il — 4 נתונים + 4 מילוני עמודות
 - [x] סכימת יעד נכתבה — [`db/01_food_db_schema.sql`](../db/01_food_db_schema.sql)
-- [ ] **הורדת שמונת הקבצים** ← חוסם את כל השאר
-- [ ] סקריפט בדיקת מבנה — כותרות, קידוד, מספר שורות, התפלגות `Mida`
-- [ ] loaders → `src_foods` · `src_recipe_components` · `src_servings` · `src_mida`
-- [ ] טרנספורמציה → `foods` · `food_servings` · `food_nutrients` · `food_recipe_components`
+- [x] הורדת הקבצים — 4 קובצי הנתונים יושבים ב-`db/source/`. 4 מילוני העמודות שימשו לפענוח `makor` ולשמות רכיבי התזונה, ואינם נטענים
+- [x] סקריפט בדיקת מבנה — [`db/02_inspect_source.py`](../db/02_inspect_source.py) → `source_report.txt`
+- [x] loaders → `src_foods` · `src_recipe_components` · `src_servings` · `src_mida` — [`db/03_load_source.py`](../db/03_load_source.py). בדיקות הקישור עברו: רכיבי מתכון, מתכונים וקודי `mida` נמצאו כולם
+- [x] טרנספורמציה → `foods` · `food_servings` · `food_nutrients` · `food_recipe_components` — [`db/04_transform.py`](../db/04_transform.py)
 - [ ] בדיקת שפיות: 30 פריטים מול תוויות. **מרובד לפי מקור** (USDA / תעשייה / מתכונים), לא אקראי
 - [ ] אצירה: סימון `menu_eligible` לפי עומק קטגוריה
 - [ ] תיוג: כשרות · אלרגנים · `quality` · `by_weight`/`whole_only`/`max_g` · `prep` · `price`
 - [ ] טבלת ~50 מוצרים מסחריים — **אימות מול תוויות עדכניות**, לא מהקובץ
-- [ ] ולידטור: `v_eligible_missing_tags` מחזיר 0 שורות
+- [ ] ולידטור: `v_eligible_missing_tags` מחזיר 0 שורות — **הוולידטור מחזיר 0 אבל סורק קבוצה ריקה**: `menu_eligible = 0` בכל המאגר. הוא מתחיל להיות משמעותי רק כשהאצירה תסמן פריטים
 - [ ] הרצת רגרסיה מלאה — ראה [`measurements.md`](measurements.md)
+
+### המאגר בייצור
+
+Supabase, פרויקט `nutrition-app` (`maodzpuxeiryeqrkyfld`, eu-central-1).
+
+| | שורות |
+|---|---|
+| `foods` | 4,620 |
+| `food_servings` | 9,855 |
+| `food_recipe_components` | 8,309 |
+| מתוך `foods` — `complete = true` | 2,758 |
+
+`complete` נגזר מנוכחות תשע חומצות האמינו החיוניות ב-`food_nutrients`. הגזירה נעדרה מ-`04_transform.py` והעמודה נשארה `false`; תוקנה ידנית בייצור ונוספה לקוד ב-28.08.2026.
 
 ### מה שחשוב לזכור בשלב הזה
 

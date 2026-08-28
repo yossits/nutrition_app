@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-02_inspect_source.py — בדיקת מבנה לקבצי המקור של מאגר צמרת (משרד הבריאות).
+02_inspect_source.py — structure inspection for the Tzameret (Ministry of
+Health) source files.
 
-מה הוא עושה:
-  סורק את db/source/ (או תיקייה שנמסרה כארגומנט), ולכל קובץ xlsx/csv מדפיס:
-  גיליונות, ממדים, 3 שורות ראשונות כמו-שהן, שורת כותרות משוערת, פרופיל לכל
-  עמודה (שם, מילוי, יחס מספרי, דוגמאות), התפלגות ערכי Mida, ספירת CODE
-  ייחודיים, וחפיפת CODE בין קבצים.
+What it does:
+  Scans db/source/ (or a directory passed as an argument) and, for every
+  xlsx/csv file, prints: sheets, dimensions, the first 3 rows verbatim, the
+  guessed header row, a profile per column (name, fill rate, numeric ratio,
+  samples), the distribution of Mida values, the number of distinct CODEs,
+  and the CODE overlap between files.
 
-מה הוא לא עושה:
-  לא כותב לשום DB, לא משנה קבצים. קריאה בלבד.
+What it does not do:
+  Writes to no DB and modifies no file. Read-only.
 
-הרצה (משורש הריפו):
-  python db/02_inspect_source.py            # קורא מ-db/source
-  python db/02_inspect_source.py <תיקייה>   # תיקייה אחרת
+Run (from the repo root):
+  python db/02_inspect_source.py            # reads from db/source
+  python db/02_inspect_source.py <dir>      # a different directory
 
-פלט:
-  db/source_report.txt  — הדוח המלא. את הקובץ הזה מעלים לשיחה לכתיבת ה-loaders.
+Output:
+  db/source_report.txt  — the full report. This is the file to hand over when
+  writing the loaders.
 """
 
 import csv
@@ -27,14 +30,14 @@ from pathlib import Path
 try:
     from openpyxl import load_workbook
 except ImportError:
-    sys.exit("חסר openpyxl. להריץ:  pip install openpyxl")
+    sys.exit("openpyxl is missing. Run:  pip install openpyxl")
 
-# קונסולת Windows לא תמיד ב-UTF-8; לא נותנים לעברית להפיל את הסקריפט
+# The Windows console is not always UTF-8; don't let Hebrew crash the script
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-MAX_SAMPLE_LEN = 40          # קיצוץ ערכים ארוכים בדוח
-TOP_MIDA = 20                # כמה ערכי Mida נפוצים להציג
+MAX_SAMPLE_LEN = 40          # truncate long values in the report
+TOP_MIDA = 20                # how many frequent Mida values to show
 CSV_ENCODINGS = ("utf-8-sig", "utf-8", "cp1255", "cp862")
 
 
@@ -62,7 +65,7 @@ def looks_like(name, *needles):
 
 
 def guess_header_row(rows):
-    """מבין 5 השורות הראשונות — זו עם הכי הרבה תאים טקסטואליים לא-ריקים."""
+    """Of the first 5 rows — the one with the most non-empty text cells."""
     best, best_score = 0, -1
     for i, row in enumerate(rows[:5]):
         score = sum(1 for c in row if c is not None and not is_number(c) and str(c).strip())
@@ -72,22 +75,22 @@ def guess_header_row(rows):
 
 
 def profile_table(rows, out):
-    """rows: רשימת שורות (list of tuples). מדפיס פרופיל ומחזיר (codes, midas)."""
+    """rows: a list of rows (tuples). Prints a profile, returns (codes, midas)."""
     if not rows:
-        out.write("  (ריק)\n")
+        out.write("  (empty)\n")
         return set(), []
 
-    out.write("  3 שורות ראשונות, כמו שהן:\n")
+    out.write("  First 3 rows, verbatim:\n")
     for r in rows[:3]:
         out.write("    | " + " | ".join(clip(c) for c in r[:14]))
         if len(r) > 14:
-            out.write(f" | … (+{len(r)-14} עמודות)")
+            out.write(f" | … (+{len(r)-14} columns)")
         out.write("\n")
 
     h = guess_header_row(rows)
     headers = [str(c).strip() if c is not None else f"col_{j}" for j, c in enumerate(rows[h])]
     data = rows[h + 1 :]
-    out.write(f"  שורת כותרות משוערת: {h + 1} · שורות נתונים: {len(data)} · עמודות: {len(headers)}\n\n")
+    out.write(f"  Guessed header row: {h + 1} · data rows: {len(data)} · columns: {len(headers)}\n\n")
 
     ncols = len(headers)
     non_empty = [0] * ncols
@@ -108,20 +111,20 @@ def profile_table(rows, out):
             if len(distinct[j]) <= 1000:
                 distinct[j].add(str(v).strip())
 
-    out.write(f"  {'#':>3}  {'עמודה':<28} {'מילוי':>7} {'מספרי':>6} {'ייחודי':>7}  דוגמאות\n")
+    out.write(f"  {'#':>3}  {'column':<28} {'fill':>9} {'numeric':>8} {'distinct':>9}  samples\n")
     for j, name in enumerate(headers):
         fill = f"{non_empty[j]}/{len(data)}" if data else "0"
         num_pct = f"{100*numeric[j]//non_empty[j]}%" if non_empty[j] else "—"
         dis = f"{len(distinct[j])}" + ("+" if len(distinct[j]) > 1000 else "")
-        out.write(f"  {j:>3}  {clip(name):<28} {fill:>7} {num_pct:>6} {dis:>7}  {', '.join(samples[j])}\n")
+        out.write(f"  {j:>3}  {clip(name):<28} {fill:>9} {num_pct:>8} {dis:>9}  {', '.join(samples[j])}\n")
 
-    # עמודות מפתח
+    # Key columns
     codes = set()
     midas = []
     for j, name in enumerate(headers):
         if looks_like(name, "code", "קוד") and non_empty[j]:
             codes = distinct[j]
-            out.write(f"\n  ▸ עמודת CODE: '{name}' — {len(codes)}{'+' if len(codes) > 1000 else ''} ערכים ייחודיים\n")
+            out.write(f"\n  ▸ CODE column: '{name}' — {len(codes)}{'+' if len(codes) > 1000 else ''} distinct values\n")
         if looks_like(name, "mida", "מידה") and non_empty[j]:
             from collections import Counter
             cnt = Counter()
@@ -130,7 +133,7 @@ def profile_table(rows, out):
                 if v is not None and str(v).strip():
                     cnt[str(v).strip()] += 1
             midas = cnt.most_common(TOP_MIDA)
-            out.write(f"\n  ▸ עמודת Mida: '{name}' — {len(cnt)} ערכים שונים. הנפוצים:\n")
+            out.write(f"\n  ▸ Mida column: '{name}' — {len(cnt)} distinct values. Most frequent:\n")
             for val, c in midas:
                 out.write(f"      {clip(val):<20} × {c}\n")
     return codes, midas
@@ -141,10 +144,10 @@ def read_xlsx(path, out):
     all_codes = set()
     for ws in wb.worksheets:
         rows = [tuple(r) for r in ws.iter_rows(values_only=True)]
-        # השמטת שורות ריקות לגמרי בקצה
+        # drop entirely empty trailing rows
         while rows and all(c is None for c in rows[-1]):
             rows.pop()
-        out.write(f"\n  ── גיליון: '{ws.title}' ({len(rows)} שורות)\n")
+        out.write(f"\n  ── sheet: '{ws.title}' ({len(rows)} rows)\n")
         codes, _ = profile_table(rows, out)
         all_codes |= codes
     wb.close()
@@ -162,7 +165,7 @@ def read_csv(path, out):
         except UnicodeDecodeError:
             continue
     if text is None:
-        out.write("  ✗ לא זוהה קידוד. נסה לפתוח ידנית ולשמור כ-UTF-8.\n")
+        out.write("  ✗ Encoding not detected. Try opening it by hand and saving as UTF-8.\n")
         return set()
     try:
         dialect = csv.Sniffer().sniff(text[:4000], delimiters=",;\t")
@@ -170,7 +173,7 @@ def read_csv(path, out):
     except csv.Error:
         delim = ","
     rows = [tuple(r) for r in csv.reader(io.StringIO(text), delimiter=delim)]
-    out.write(f"  קידוד: {enc} · מפריד: {delim!r} · {len(rows)} שורות\n")
+    out.write(f"  encoding: {enc} · delimiter: {delim!r} · {len(rows)} rows\n")
     codes, _ = profile_table(rows, out)
     return codes
 
@@ -178,14 +181,15 @@ def read_csv(path, out):
 def main():
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent / "source"
     if not src.is_dir():
-        sys.exit(f"התיקייה {src} לא קיימת. להוריד את שמונת הקבצים מ-data.gov.il לתוכה.")
+        sys.exit(f"Directory {src} does not exist. "
+                 f"Download the eight files from data.gov.il into it.")
 
     files = sorted(p for p in src.iterdir() if p.suffix.lower() in (".xlsx", ".xls", ".csv"))
     if not files:
-        sys.exit(f"אין קבצי xlsx/csv בתוך {src}.")
+        sys.exit(f"No xlsx/csv files inside {src}.")
 
     out = io.StringIO()
-    out.write(f"דוח מבנה — קבצי המקור של מאגר צמרת\nתיקייה: {src}\nקבצים: {len(files)}\n")
+    out.write(f"Structure report — Tzameret source files\nDirectory: {src}\nFiles: {len(files)}\n")
     out.write("=" * 78 + "\n")
 
     codes_by_file = {}
@@ -196,26 +200,26 @@ def main():
                 codes_by_file[p.name] = read_xlsx(p, out)
             else:
                 codes_by_file[p.name] = read_csv(p, out)
-        except Exception as e:  # קובץ אחד שבור לא מפיל את הדוח
-            out.write(f"  ✗ שגיאה בקריאה: {type(e).__name__}: {e}\n")
+        except Exception as e:  # one broken file must not kill the report
+            out.write(f"  ✗ Read error: {type(e).__name__}: {e}\n")
 
-    # חפיפת CODE בין קבצים — זה מה שמאמת את הקישור
+    # CODE overlap between files — this is what validates the linkage
     keyed = {k: v for k, v in codes_by_file.items() if v}
     if len(keyed) > 1:
-        out.write("\n" + "=" * 78 + "\nחפיפת CODE בין קבצים:\n")
+        out.write("\n" + "=" * 78 + "\nCODE overlap between files:\n")
         names = list(keyed)
         for i in range(len(names)):
             for j in range(i + 1, len(names)):
                 a, b = keyed[names[i]], keyed[names[j]]
                 inter = len(a & b)
-                out.write(f"  {names[i]} ∩ {names[j]}: {inter} משותפים "
-                          f"(מתוך {len(a)} / {len(b)})\n")
+                out.write(f"  {names[i]} ∩ {names[j]}: {inter} shared "
+                          f"(out of {len(a)} / {len(b)})\n")
 
     report = out.getvalue()
     dest = Path(__file__).parent / "source_report.txt"
     dest.write_text(report, encoding="utf-8")
     print(report)
-    print(f"\n✔ הדוח נשמר: {dest}\n  את הקובץ הזה מעלים לשיחה לכתיבת ה-loaders.")
+    print(f"\n✔ Report saved: {dest}\n  This is the file to hand over when writing the loaders.")
 
 
 if __name__ == "__main__":

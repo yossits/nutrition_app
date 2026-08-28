@@ -1,19 +1,26 @@
 -- ============================================================================
---  מאגר המזון — סכימת יעד
---  מקור: מאגר התזונה הלאומי הישראלי (צמרת), משרד הבריאות, data.gov.il
---  יעד:   Postgres 15+ / Supabase
+--  Food database — target schema
+--  Source: Israeli National Nutrient Database (Tzameret), Ministry of Health,
+--          data.gov.il
+--  Target: Postgres 15+ / Supabase
 --
---  עיקרון: טבלאות src_* קולטות את הקבצים כמו שהם (jsonb), בלי אילוצים.
---          הטרנספורמציה ל-foods היא צעד נפרד ובר-הרצה-חוזרת.
---          כך שינוי בקבצי המקור לא דורש שינוי סכימה.
+--  Principle: the src_* tables ingest the files exactly as they are (jsonb),
+--             with no constraints. Transforming into foods is a separate,
+--             re-runnable step. That way a change in the source files does
+--             not force a schema change.
 --
---  ⚠ שמות העמודות בקבצי המקור טרם נראו. ה-loader הוא זה שממפה
---    raw->>'...' לשדות; הסכימה עצמה לא תלויה בהם.
+--  ⚠ The source column names had not been seen when this was written. The
+--    loader is what maps raw->>'...' onto fields; the schema does not
+--    depend on them.
 -- ============================================================================
+
+-- Outside the transaction: if the role lacks the privilege (managed Supabase),
+-- enable it from the dashboard instead
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 BEGIN;
 
--- ---------------------------------------------------------------- טיפוסים --
+-- ------------------------------------------------------------------- Types --
 
 CREATE TYPE kosher_type   AS ENUM ('meat', 'dairy', 'parve');
 CREATE TYPE food_category AS ENUM ('protein', 'carb', 'veg', 'fat', 'fruit', 'drink');
@@ -21,10 +28,10 @@ CREATE TYPE source_kind   AS ENUM ('ingredient', 'recipe', 'industry');
 
 
 -- ============================================================================
---  1. שכבת קליטה (staging) — הקבצים כפי שהורדו
+--  1. Staging layer — the files exactly as downloaded
 -- ============================================================================
 
--- קובץ 1: רשימת המצרכים והמתכונים, ערכי תזונה ל-100 ג'
+-- File 1: the ingredient and recipe list, nutrition values per 100 g
 CREATE TABLE src_foods (
     row_num int PRIMARY KEY,
     code    text,
@@ -32,7 +39,7 @@ CREATE TABLE src_foods (
 );
 CREATE INDEX src_foods_code_idx ON src_foods (code);
 
--- קובץ 2: הרכב המתכונים — איזה מצרך ובאיזו כמות
+-- File 2: recipe composition — which ingredient, and how much of it
 CREATE TABLE src_recipe_components (
     row_num        int PRIMARY KEY,
     recipe_code    text,
@@ -43,7 +50,7 @@ CREATE TABLE src_recipe_components (
 );
 CREATE INDEX src_recipe_components_recipe_idx ON src_recipe_components (recipe_code);
 
--- קובץ 3: משקלי מנות / גדלי יחידה
+-- File 3: serving weights / unit sizes
 CREATE TABLE src_servings (
     row_num   int PRIMARY KEY,
     code      text,
@@ -53,7 +60,7 @@ CREATE TABLE src_servings (
 );
 CREATE INDEX src_servings_code_idx ON src_servings (code);
 
--- קובץ 4: מפתח יחידות המידה — פענוח Mida
+-- File 4: the measurement-unit key — decodes Mida
 CREATE TABLE src_mida (
     mida_code text PRIMARY KEY,
     label_he  text,
@@ -62,11 +69,11 @@ CREATE TABLE src_mida (
 
 
 -- ============================================================================
---  2. שכבת ליבה
+--  2. Core layer
 -- ============================================================================
 
--- 74 רכיבי התזונה. המאקרו יושב denormalized על foods (המסלול החם);
--- כל השאר כאן, לחיפוש והעשרה.
+-- The 74 nutrients. The macros sit denormalized on foods (the hot path);
+-- everything else lives here, for search and enrichment.
 CREATE TABLE nutrients (
     id      serial PRIMARY KEY,
     code    text UNIQUE NOT NULL,
@@ -78,12 +85,15 @@ CREATE TABLE nutrients (
 
 CREATE TABLE foods (
     id          bigserial PRIMARY KEY,
-    source_code text UNIQUE NOT NULL,           -- CODE מהמאגר
-    source      source_kind NOT NULL,
+    source_code text UNIQUE NOT NULL,           -- Code, from the source database
+    class_code  text,                           -- smlmitzrach — classification code; leading digits = food group
+    makor       smallint,                       -- makor as-is from the source. 7 values; decoded in the column dictionary
+    source      source_kind,                    -- derived: 'recipe' if Code appears as a recipe in the composition
+                                                -- file; ingredient/industry by decoded makor. NULL until then
     name_he     text NOT NULL,
     name_en     text,
 
-    -- ערכים ל-100 גרם -----------------------------------------------------
+    -- Values per 100 g ------------------------------------------------------
     kcal      numeric NOT NULL CHECK (kcal      >= 0),
     protein_g numeric NOT NULL CHECK (protein_g >= 0),
     fat_g     numeric NOT NULL CHECK (fat_g     >= 0),
@@ -93,22 +103,22 @@ CREATE TABLE foods (
     sat_fat_g numeric,
     sodium_mg numeric,
 
-    -- שדות אצירה — אף אחד מהם לא קיים במקור --------------------------------
+    -- Curation fields — none of these exist in the source --------------------
     category              food_category,
     kosher                kosher_type,
     allergens             text[] NOT NULL DEFAULT '{}',
-    allergens_reviewed_at timestamptz,          -- '{}' = נבדק ונקי · NULL כאן = לא נבדק
+    allergens_reviewed_at timestamptz,          -- '{}' = reviewed and clean · NULL here = not reviewed
     tags                  text[] NOT NULL DEFAULT '{}',   -- vegan · vegetarian · ...
     quality               smallint CHECK (quality BETWEEN 1 AND 3),
-    complete              boolean NOT NULL DEFAULT false, -- 9 חומצות אמינו חיוניות
-    supp                  boolean NOT NULL DEFAULT false, -- תוסף (אבקת חלבון וכו')
+    complete              boolean NOT NULL DEFAULT false, -- all 9 essential amino acids
+    supp                  boolean NOT NULL DEFAULT false, -- supplement (protein powder etc.)
     prep                  smallint CHECK (prep  BETWEEN 0 AND 2),
     price                 smallint CHECK (price BETWEEN 1 AND 3),
 
-    -- מדיניות מנות ---------------------------------------------------------
-    by_weight  boolean NOT NULL DEFAULT true,   -- נמדד בגרמים
-    whole_only boolean NOT NULL DEFAULT false,  -- אין חצי ביצה
-    max_g      numeric CHECK (max_g > 0),       -- תקרה נגד 400 ג' אבוקדו
+    -- Serving policy --------------------------------------------------------
+    by_weight  boolean NOT NULL DEFAULT true,   -- measured in grams
+    whole_only boolean NOT NULL DEFAULT false,  -- no such thing as half an egg
+    max_g      numeric CHECK (max_g > 0),       -- ceiling against 400 g of avocado
 
     menu_eligible boolean NOT NULL DEFAULT false,
 
@@ -117,7 +127,7 @@ CREATE TABLE foods (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
 
-    -- שער הבטיחות: אצירה בלי תיוג היא באג בטיחותי, לא באג נתונים ------------
+    -- The safety gate: eligible without tagging is a safety bug, not a data bug
     CONSTRAINT eligible_requires_safety_tagging CHECK (
         NOT menu_eligible OR (
             category              IS NOT NULL
@@ -137,16 +147,16 @@ CREATE INDEX foods_eligible_idx ON foods (category) WHERE menu_eligible;
 CREATE INDEX foods_allergens_idx ON foods USING gin (allergens);
 CREATE INDEX foods_tags_idx      ON foods USING gin (tags);
 CREATE INDEX foods_name_trgm_idx ON foods USING gin (name_he gin_trgm_ops);
--- דורש:  CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- Requires:  CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 
--- יחידות הגשה — זה מה שהופך "170 ג'" ל"בטטה וחצי"
+-- Serving units — this is what turns "170 g" into "בטטה וחצי"
 CREATE TABLE food_servings (
     id              bigserial PRIMARY KEY,
     food_id         bigint NOT NULL REFERENCES foods(id) ON DELETE CASCADE,
     mida_code       text,
     label_he        text NOT NULL,              -- "גביע" · "פרוסה" · "כף"
-    label_he_plural text,                       -- "גביעים" — לא קיים במקור, נגזר
+    label_he_plural text,                       -- "גביעים" — not in the source, derived
     grams           numeric NOT NULL CHECK (grams > 0),
     is_default      boolean NOT NULL DEFAULT false,
     UNIQUE (food_id, label_he)
@@ -164,8 +174,8 @@ CREATE TABLE food_nutrients (
 );
 
 
--- הרכב המתכונים. זה מה שמאפשר להסיק אלרגנים אוטומטית ל-~1,400 מתכונים
--- במקום לתייג אותם ביד.
+-- Recipe composition. This is what makes it possible to infer allergens
+-- automatically for ~1,400 recipes instead of tagging them by hand.
 CREATE TABLE food_recipe_components (
     recipe_id    bigint NOT NULL REFERENCES foods(id) ON DELETE CASCADE,
     component_id bigint NOT NULL REFERENCES foods(id),
@@ -175,10 +185,10 @@ CREATE TABLE food_recipe_components (
 
 
 -- ============================================================================
---  3. ולידטורים — סעיף 9.7 שלב 7, לא אופציונלי
+--  3. Validators — spec §9.7 step 7, not optional
 -- ============================================================================
 
--- חייב להחזיר 0 שורות לפני כל שחרור.
+-- Must return 0 rows before every release.
 CREATE VIEW v_eligible_missing_tags AS
 SELECT id, source_code, name_he,
        category              IS NULL AS no_category,
@@ -193,7 +203,8 @@ WHERE menu_eligible
        OR (category = 'protein' AND quality IS NULL));
 
 
--- מתכון מובחר שרכיב שלו לא נבדק לאלרגנים = אלרגן שעלול לעבור מתחת לרדאר.
+-- A curated recipe with an unreviewed component = an allergen that can slip
+-- under the radar.
 CREATE VIEW v_recipe_unreviewed_components AS
 SELECT r.id AS recipe_id, r.name_he AS recipe, c.id AS component_id, c.name_he AS component
 FROM foods r
@@ -203,7 +214,8 @@ WHERE r.menu_eligible
   AND c.allergens_reviewed_at IS NULL;
 
 
--- אלרגנים שמתכון יורש מרכיביו. מקור ההצעה לתיוג, לא תחליף לאישור אנושי.
+-- Allergens a recipe inherits from its components. A source of tagging
+-- suggestions, not a substitute for human sign-off.
 CREATE VIEW v_recipe_inherited_allergens AS
 SELECT rc.recipe_id, array_agg(DISTINCT a ORDER BY a) AS inherited
 FROM food_recipe_components rc
@@ -212,8 +224,8 @@ CROSS JOIN LATERAL unnest(c.allergens) AS a
 GROUP BY rc.recipe_id;
 
 
--- עומק המאגר לפי קטגוריה. זה המדד שהאצירה אמורה להזיז,
--- לא המספר הכולל. שומן וחלבון הם הצוואר הצר (17% / 20% באחוזון 10).
+-- Pool depth by category. This is the metric curation is meant to move,
+-- not the total count. Fat and protein are the bottleneck (17% / 20% at p10).
 CREATE VIEW v_pool_depth AS
 SELECT category,
        count(*)                                                   AS eligible,
@@ -228,7 +240,7 @@ ORDER BY category;
 
 
 -- ============================================================================
---  4. תחזוקה
+--  4. Maintenance
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION touch_updated_at() RETURNS trigger AS $$
@@ -245,7 +257,7 @@ CREATE TRIGGER foods_touch_updated_at
 COMMIT;
 
 -- ============================================================================
---  הערה על RLS: foods · food_servings · food_nutrients · nutrients הם
---  נתוני ייחוס ציבוריים, בלי מידע אישי. RLS מופעל רק על הטבלאות
---  שבסעיף 13.3 שנושאות מידע משתמש.
+--  A note on RLS: foods · food_servings · food_nutrients · nutrients are
+--  public reference data, with no personal information. RLS is enabled only
+--  on the tables in spec §13.3 that carry user data.
 -- ============================================================================

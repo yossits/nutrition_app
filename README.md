@@ -15,12 +15,19 @@
 המפתח נמסר כמשתנה סביבה בלבד:
 
 ```bash
-# Windows
+# בחר את השורה של ה-shell שלך:
+
+# Windows — cmd
 set ANTHROPIC_API_KEY=sk-ant-...
+
+# Windows — PowerShell
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
 
 # Mac / Linux
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+ב-PowerShell, `set` הוא alias ל-`Set-Variable` ואינו מגדיר משתנה סביבה — הוא יוצר משתנה בשם `ANTHROPIC_API_KEY=sk-ant-...` ולא מתריע. הסקריפט ייפול על "חסר מפתח" בלי שום רמז לסיבה.
 
 ה-`.gitignore` חוסם `.env` וקבצי מפתחות. אם מפתח נחשף אי פעם — לבטל אותו מיד ב-console.anthropic.com ולהנפיק חדש. מחיקת הקומיט **לא** מספיקה; הוא נשאר בהיסטוריה.
 
@@ -49,7 +56,8 @@ pip install -r requirements.txt
 cd spike
 python run_spike.py                 # ליבה דטרמיניסטית, ללא מפתח
 
-set ANTHROPIC_API_KEY=sk-ant-...
+set ANTHROPIC_API_KEY=sk-ant-...              # cmd
+$env:ANTHROPIC_API_KEY = "sk-ant-..."         # PowerShell
 python run_generation.py 40         # שיעור מעבר מול ה-API
 python show_menus.py 8              # יוצר menus.html לפתיחה בדפדפן
 ```

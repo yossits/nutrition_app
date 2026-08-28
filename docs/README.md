@@ -48,9 +48,18 @@ docs/
 מחוץ ל-`docs/`:
 
 ```
-db/01_food_db_schema.sql       סכימת מאגר המזון
+db/
+├── 01_food_db_schema.sql      סכימת מאגר המזון + שלושת הוולידטורים
+├── 02_inspect_source.py       סקירת מבנה קובצי המקור → source_report.txt
+├── 03_load_source.py          טעינת ארבעת הקבצים לשכבת src_*
+├── 04_transform.py            src_* → foods · servings · nutrients · components
+├── 05_derive_kcal.sql         גזירת kcal, v_kcal_outliers, הרשאות ה-views
+└── source/                    ארבעת קובצי משרד הבריאות, מנוהלים בגיט
+
 spike/                         הליבה המוכחת. ראה measurements.md
 ```
+
+דוחות ההרצה (`db/*_report.txt`) אינם נכנסים לגיט — ראה `.gitignore`.
 
 ---
 

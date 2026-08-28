@@ -101,33 +101,48 @@ WHERE f.id = src.id;
 -- NOT a CHECK constraint. Items land here and are still correct (sugar-free
 -- products). An item listed here does not get menu_eligible until a human has
 -- ruled on it — a curation decision, not an automatic block.
+--
+-- category and menu_eligible come from food_curation since 06_split_curation.sql
+-- — this file defines the view a second time, alongside 01_food_db_schema.sql,
+-- so both definitions have to move together. A re-run of this file with the
+-- old body would silently restore a view reading columns that no longer exist
+-- on foods, and fail on the next re-run of the schema instead of here.
+--
+-- LEFT JOIN, and here it is load-bearing. The gate has to work on an UNCURATED
+-- database — that is its whole job, since an item is ruled on here before it
+-- gets menu_eligible. An INNER join would empty the view exactly when it
+-- matters most. COALESCE keeps the ordering column non-NULL.
 CREATE OR REPLACE VIEW v_kcal_outliers AS
-SELECT id, source_code, name_he, makor, category, menu_eligible,
-       kcal_source, kcal,
-       ROUND(((kcal - kcal_source) / NULLIF(kcal_source,0) * 100)::numeric, 1) AS dev_pct,
+SELECT f.id, f.source_code, f.name_he, f.makor,
+       c.category,
+       COALESCE(c.menu_eligible, false) AS menu_eligible,
+       f.kcal_source, f.kcal,
+       ROUND(((f.kcal - f.kcal_source) / NULLIF(f.kcal_source,0) * 100)::numeric, 1) AS dev_pct,
        CASE
-         WHEN kcal > kcal_source  THEN 'עודף — חשד לפוליאולים או כוהל'
-         WHEN fiber_g IS NULL     THEN 'חוסר — סיבים לא ידועים'
-         ELSE                          'חוסר — לא מוסבר'
+         WHEN f.kcal > f.kcal_source THEN 'עודף — חשד לפוליאולים או כוהל'
+         WHEN f.fiber_g IS NULL      THEN 'חוסר — סיבים לא ידועים'
+         ELSE                             'חוסר — לא מוסבר'
        END AS suspected
-FROM foods
-WHERE kcal_source > 0
-  AND kcal IS NOT NULL
-  AND abs(kcal - kcal_source) / kcal_source > 0.12
-  AND abs(kcal - kcal_source) >= 5
-ORDER BY menu_eligible DESC, abs(kcal - kcal_source) / kcal_source DESC;
+FROM foods f
+LEFT JOIN food_curation c ON c.source_code = f.source_code
+WHERE f.kcal_source > 0
+  AND f.kcal IS NOT NULL
+  AND abs(f.kcal - f.kcal_source) / f.kcal_source > 0.12
+  AND abs(f.kcal - f.kcal_source) >= 5
+ORDER BY COALESCE(c.menu_eligible, false) DESC,
+         abs(f.kcal - f.kcal_source) / f.kcal_source DESC;
 
 -- --------------------------------------------------------------- 4. Grants
 
 -- A view carries no RLS of its own and runs as its owner, so a view granted to
 -- anon reads and writes straight past the policies on foods. Supabase grants
--- anon full DML on new objects by default, and a single-table view like this
--- one is auto-updatable — which made DELETE through the view a live path into
--- foods with the public anon key.
+-- anon full DML on new objects by default, and a single-table view like
+-- v_pool_depth is auto-updatable — which made DELETE through the view a live
+-- path into the base table with the public anon key.
 --
 -- security_invoker makes the view honour the caller's own RLS; the REVOKE/GRANT
--- pair leaves nothing but SELECT. Applied to the pre-existing views too: they
--- had the same hole.
+-- pair leaves nothing but SELECT. Applied to every view, not just this one:
+-- they all had the same hole. Seven since 06_split_curation.sql.
 DO $$
 DECLARE v text;
 BEGIN
@@ -136,7 +151,9 @@ BEGIN
       'v_eligible_missing_tags',
       'v_pool_depth',
       'v_recipe_inherited_allergens',
-      'v_recipe_unreviewed_components'
+      'v_recipe_unreviewed_components',
+      'v_menu_foods',
+      'v_curation_orphans'
   ] LOOP
       EXECUTE format('ALTER VIEW %I SET (security_invoker = on)', v);
       EXECUTE format('REVOKE ALL ON %I FROM anon, authenticated', v);

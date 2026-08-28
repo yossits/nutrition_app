@@ -29,6 +29,13 @@ What goes where:
   foods.complete   — derived from the nine essential amino acids, once
                      food_nutrients is populated
 
+What this script must never touch:
+  food_curation    — every hand-made tagging field. It is not in the TRUNCATE
+                     list and has no foreign key to foods, so CASCADE cannot
+                     reach it. Two stop conditions at the end prove that on
+                     every run and roll the run back if either fails. See
+                     db/06_split_curation.sql for why the FK is absent.
+
 makor decoding (from "מבנה קובץ מצרכים.xlsx", Ministry of Health):
   1 USA (NDB, FNDDS)              → ingredient
   2 industry, label only          → industry
@@ -115,6 +122,16 @@ ESSENTIAL_AMINO_ACIDS = (
 AMINO_CODES_SQL = ", ".join(f"'{code}'" for code in ESSENTIAL_AMINO_ACIDS)
 
 STEPS = [
+    # food_curation is NOT on this list, and it has no foreign key to foods, so
+    # TRUNCATE ... CASCADE cannot reach it. Both halves of that are load-bearing.
+    #
+    # CASCADE empties every table that references one on the list. A FK from
+    # food_curation to foods — the thing that looks like the careful, correct
+    # addition — would CONDUCT the deletion here, not prevent it, and one
+    # re-import would erase the entire tagging effort. That is exactly the bug
+    # db/06_split_curation.sql was written to close. Do not add the FK.
+    #
+    # What replaces it: v_curation_orphans, checked as a stop condition below.
     ("Truncate the core tables", """
         TRUNCATE food_recipe_components, food_nutrients, food_servings,
                  foods, nutrients RESTART IDENTITY CASCADE"""),
@@ -311,7 +328,10 @@ CHECKS = [
         WHERE NOT EXISTS (SELECT 1 FROM foods c WHERE c.source_code = rc.component_code)
            OR NOT EXISTS (SELECT 1 FROM foods r WHERE r.source_code = rc.recipe_code)"""),
 
-    ("Entries with no human serving unit — natural candidates for by_weight", """
+    # A count over foods, not a tagging state — by_weight lives on
+    # food_curation and is set during curation, not derived here. This is the
+    # shortlist that curation should default to by_weight = true.
+    ("Entries with no human serving unit — the by_weight shortlist for curation", """
         SELECT count(*) FROM foods f
         WHERE NOT EXISTS (SELECT 1 FROM food_servings s WHERE s.food_id = f.id)"""),
 
@@ -335,6 +355,58 @@ CHECKS = [
         GROUP BY f.id, f.name_he ORDER BY f.id LIMIT 5"""),
 ]
 
+# The stop conditions live in main(), not here, because they are not queries
+# whose output gets printed — they decide whether the run is allowed to commit.
+# See check_stop_conditions().
+
+
+def check_stop_conditions(cur, out, curation_before):
+    """The two conditions that abort the run. Returns a list of failures.
+
+    These are not informative checks. food_curation deliberately carries no
+    foreign key to foods — a FK would conduct the TRUNCATE ... CASCADE rather
+    than block it, which is the whole bug db/06_split_curation.sql closed. The
+    integrity a FK would have given is enforced here instead, and it has to be
+    enforced loudly: a stop condition that only prints is worth nothing, since
+    the damage it reports has already been committed by the time anyone reads
+    the report.
+    """
+    failures = []
+    out.write("\n▸ Stop conditions — the run is rolled back if either fails\n")
+
+    # 1. What replaces the foreign key. A curation row whose source_code is no
+    #    longer in foods means this import dropped an item out from under
+    #    tagging work that still exists.
+    cur.execute("SELECT count(*) FROM v_curation_orphans")
+    orphans = cur.fetchone()[0]
+    if orphans:
+        cur.execute("""SELECT source_code, category, menu_eligible, curated_by
+                       FROM v_curation_orphans ORDER BY source_code LIMIT 50""")
+        rows = "\n".join("        " + " | ".join(
+            "∅" if v is None else str(v) for v in r) for r in cur.fetchall())
+        failures.append(
+            f"v_curation_orphans returned {orphans} rows. Curation work points "
+            f"at source_codes that are no longer in foods — the source file "
+            f"dropped them, or their code changed:\n{rows}")
+    else:
+        out.write("    ✓ v_curation_orphans — 0 rows\n")
+
+    # 2. The direct test that TRUNCATE did not reach food_curation. Counted
+    #    before the TRUNCATE step and again after everything, so a loss caused
+    #    by this run cannot hide behind a curation session that ran in parallel.
+    cur.execute("SELECT count(*) FROM food_curation")
+    curation_after = cur.fetchone()[0]
+    if curation_after < curation_before:
+        failures.append(
+            f"food_curation lost rows during this run: {curation_before} → "
+            f"{curation_after}. Something reached it. Check for a foreign key "
+            f"to foods — there must not be one.")
+    else:
+        out.write(f"    ✓ food_curation — {curation_before} rows before, "
+                  f"{curation_after} after\n")
+
+    return failures
+
 
 def main():
     url = os.environ.get("DATABASE_URL")
@@ -342,11 +414,17 @@ def main():
         sys.exit("DATABASE_URL is missing.")
 
     out = io.StringIO()
+    failures = []
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT count(*) FROM src_foods")
             if cur.fetchone()[0] == 0:
                 sys.exit("src_foods is empty — run 03_load_source.py first")
+
+            # Taken before the TRUNCATE step, so stop condition 2 measures this
+            # run and nothing else.
+            cur.execute("SELECT count(*) FROM food_curation")
+            curation_before = cur.fetchone()[0]
 
             for title, sql in STEPS:
                 cur.execute(sql)
@@ -364,11 +442,23 @@ def main():
                 for row in cur.fetchall():
                     out.write("    " + " | ".join(
                         "∅" if v is None else str(v) for v in row) + "\n")
-        conn.commit()
+
+            failures = check_stop_conditions(cur, out, curation_before)
+
+        if failures:
+            conn.rollback()
+            out.write("\n✘ ABORTED — nothing was committed.\n")
+            for f in failures:
+                out.write(f"\n{f}\n")
+        else:
+            conn.commit()
 
     report = out.getvalue()
     (HERE / "transform_report.txt").write_text(report, encoding="utf-8")
     print(report)
+    if failures:
+        sys.exit(f"\n✘ Stop condition hit. The run was rolled back and the "
+                 f"database is unchanged. Report: {HERE / 'transform_report.txt'}")
     print(f"\n✔ Saved: {HERE / 'transform_report.txt'} — hand this over.")
 
 

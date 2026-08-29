@@ -64,6 +64,7 @@ exists to open.
 """
 
 import io
+import re
 import sys
 from pathlib import Path
 
@@ -80,6 +81,37 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 HERE = Path(__file__).parent
+
+# The dry-form flag. spec/05-food-db.md §5.0.2 holds the menu pool to edible
+# forms and says enforcement is by MARKING and human judgement at curation, not
+# by exclusion — but nothing here did the marking, which is a spec describing an
+# enforcement that does not exist. Two signals have to agree, because each one
+# alone was measured against production on 29.08.2026 and each one alone is
+# wrong:
+#
+#   moisture alone — the column is there (99.2% of the candidates carry it) and
+#     it splits dry from cooked legumes perfectly: dry lentils 11.8 against
+#     cooked 69.6, dry lupin 10.4 against cooked 69.6. It is still useless on
+#     its own, because low water does not mean "not eaten as it stands": olive
+#     oil is 0.0, raw tahini 0.0, ghee 0.2, nuts and seeds 1–5. At moisture < 10
+#     the flag fires on 40 of the 119 candidates, 32 of them in the fat section
+#     — a mark that lights up most of a table trains the reader to skip it.
+#   the name alone — flags 11 and gets 4 of them wrong. The source names the raw
+#     material and then the preparation, so "עדשים יבשים, מבושלים" is a COOKED
+#     lentil, and "קלייה יבשה" is a roasting method rather than a form.
+#
+# Together they are clean: 7 flagged, none of them wrong, none in fat. Moisture
+# vetoes the three cooked legumes for free. The roasting phrase is excluded by
+# name and the exclusion is bounded — it matches exactly 3 rows in the whole
+# database (1821, 8247, 8248). `(?<!מ)קמח` is flour and not the seven baked
+# goods named "מקמח", made FROM flour.
+#
+# §5.0.2 admits name matching is weak in both directions and asks for it to be
+# visible rather than trusted, which is why the flag carries a question mark and
+# excludes nothing.
+DRY_MOISTURE_MAX = 20                                    # g water per 100 g
+DRY_NAME = re.compile(r"יבש|מיובש|אבק|(?<!מ)קמח")
+DRY_NAME_VETO = re.compile(r"(קליה|קלייה|צליה|צלייה|אפיה|אפייה|בישול)\s+יבש")
 
 # Animal food groups, by class_code prefix. Used for one thing only: the
 # vegetable-fibre flag. The 29.08.2026 decision requires a PLANT item with a
@@ -240,6 +272,9 @@ SELECT f.source_code,
        f.source::text        AS source,
        f.kcal, f.protein_g, f.fat_g, f.carb_g, f.fiber_g,
        f.complete,
+       (SELECT fn.value FROM food_nutrients fn
+          JOIN nutrients n ON n.id = fn.nutrient_id
+         WHERE fn.food_id = f.id AND n.code = 'moisture')            AS moisture,
        (SELECT count(*) FROM food_servings s WHERE s.food_id = f.id) AS servings,
        EXISTS (SELECT 1 FROM v_kcal_outliers o
                WHERE o.source_code = f.source_code)                   AS is_outlier
@@ -325,8 +360,24 @@ def sort_key(row, category):
     )
 
 
-def flags_of(row):
-    """The three marks. Marks, not exclusions — every flagged item stays."""
+def is_dry_form(row, family):
+    """Does this look like a form nobody eats as it stands? See DRY_NAME above.
+
+    `family` is needed for one exemption and one only: a protein powder IS eaten
+    as powder, and §5.0.2 names it as its own exception, governed by supp and
+    the 12% ceiling of §5.4 instead. Marking all four of them dry? would be
+    noise, and noise is what teaches a reader to skip a flag.
+    """
+    if family == "protein powders":
+        return False
+    if row["moisture"] is None or float(row["moisture"]) >= DRY_MOISTURE_MAX:
+        return False
+    name = " ".join(str(row["name_he"]).split())
+    return bool(DRY_NAME.search(name)) and not DRY_NAME_VETO.search(name)
+
+
+def flags_of(row, family):
+    """The four marks. Marks, not exclusions — every flagged item stays."""
     flags = []
     if row["is_outlier"]:
         flags.append("outlier")
@@ -334,6 +385,8 @@ def flags_of(row):
         flags.append("fiber?")
     if row["servings"] == 0:
         flags.append("by_weight?")
+    if is_dry_form(row, family):
+        flags.append("dry?")
     return flags
 
 
@@ -361,10 +414,12 @@ def write_table(out, category, title, note, selected, quotas):
     n_out = sum(1 for r in rows if r["is_outlier"])
     n_fib = sum(1 for r in rows if r["fiber_g"] is None and r["p2"] not in ANIMAL_P2)
     n_wgt = sum(1 for r in rows if r["servings"] == 0)
+    n_dry = sum(1 for fam, r in selected if is_dry_form(r, fam))
 
     out.write(f"\n\n{'=' * 118}\n")
     out.write(f"▸ {title} — {len(rows)} candidates · "
-              f"{n_out} kcal outliers · {n_fib} unknown fibre · {n_wgt} by_weight\n")
+              f"{n_out} kcal outliers · {n_fib} unknown fibre · {n_wgt} by_weight · "
+              f"{n_dry} dry\n")
     out.write(f"  {note}\n")
     out.write(f"{'=' * 118}\n")
 
@@ -388,7 +443,7 @@ def write_table(out, category, title, note, selected, quotas):
                 fmt(r["fiber_g"], 4),
                 ("yes" if r["complete"] else "no").ljust(4),
                 str(r["servings"]).rjust(2),
-                " · ".join(flags_of(r)),
+                " · ".join(flags_of(r, label)),
             ]).rstrip() + "\n")
 
     zero = [f"{lbl} ({quotas.get(lbl, 0)} in group)"
@@ -518,6 +573,19 @@ def main():
         out.write("Category comes from class_code, not from food_curation.category, "
                   "which does not exist yet.\n"
                   "This mapping is a proposal for review. It is not written anywhere.\n")
+        out.write("\nFlags mark, they never exclude — every flagged row stays in the "
+                  "list.\n"
+                  "  outlier     the derived kcal and the file's disagree beyond the "
+                  "Atwater gate\n"
+                  "  fiber?      a plant item with no fibre value; verify against a "
+                  "label before menu_eligible\n"
+                  "  by_weight?  the source gives no human serving unit\n"
+                  "  dry?        a form that is not eaten as it stands (§5.0.2): "
+                  f"moisture under {DRY_MOISTURE_MAX} g AND a name that says so.\n"
+                  "              Both are required — oil and nuts are dry and edible, "
+                  "and \"עדשים יבשים, מבושלים\" is cooked.\n"
+                  "              Protein powders are exempt; a powder eaten as powder "
+                  "is §5.0.2's own exception, held by §5.4.\n")
 
         write_table(
             out, "fat", "FAT",

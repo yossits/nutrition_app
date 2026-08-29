@@ -25,7 +25,9 @@ What goes where:
   foods            — identifiers, macros, makor, class_code, derived source
   food_nutrients   — ~60 further nutrients (EAV), Hebrew names from the
                      official dictionary
-  food_servings    — serving units, excluding 700 (gram) and 2000 (kilogram)
+  food_servings    — serving units, excluding 700 (gram) and 2000 (kilogram).
+                     label_he and label_he_plural both come from MIDA below,
+                     not from src_mida
   food_recipe_components — recipe composition, in grams
   foods.kcal_source — the file's declared food_energy, kept as-is
   foods.kcal       — derived from the macros, once foods is populated. The file
@@ -165,6 +167,144 @@ AMINO_CODES_SQL = ", ".join(f"'{code}'" for code in ESSENTIAL_AMINO_ACIDS)
 CARB_ZERO_BY_JUDGEMENT = ("638", "1134", "9691", "9784")
 CARB_ZERO_SQL = ", ".join(f"'{code}'" for code in CARB_ZERO_BY_JUDGEMENT)
 
+# The 88 serving units, mida_code → (label_he, label_he_plural).
+#
+# This table is the source for both columns of food_servings. The label is no
+# longer read from src_mida: the plural is ours and the label had to sit beside
+# it, because two places answering "what is unit 101 called" is how they drift.
+#
+# The plural is not source data. The Ministry of Health file has no plural
+# column; Hebrew morphology is something we generate, so it belongs in the code
+# that gets rebuilt on every import rather than in a table written by hand.
+# Without it the phrasing layer says "2 כף" and "3 כוס". Decided 29.08.2026 —
+# see docs/decisions.md and docs/spec/05-food-db.md §5.0.3.
+#
+# Keyed on mida_code and not on the label text: the source ships one label per
+# code, verified 1:1 against production (88 codes, 88 labels, no label under two
+# codes and no code under two labels). Keying on text would break the day that
+# stops being true.
+#
+# Whitespace is collapsed relative to the source. It touches exactly one code —
+# 101, which the file spells "יחידה␣␣קטנה מאד" with a double space, on 89 rows.
+# 105 and 601 were checked and already carry single spaces. "מאד" is kept: it is
+# valid defective spelling, not an error. 907 "שפורפרת" is kept misspelled — it
+# is what the source says, it is one row, and the unit is not menu-eligible
+# anyway; correcting it here would invent data.
+#
+# 700 (gram) and 2000 (kilogram) are deliberately absent. They are pseudo-units,
+# filtered before this table is consulted, and 9,130 of the 19,024 src_servings
+# rows carry them. A code that reaches food_servings without a row here rolls
+# the run back — see check_stop_conditions(), condition 4.
+#
+# Which of these may serve as a MENU unit is a different question, and it is not
+# answered here. That column lives in db/09_export_menu_foods.py, next to the
+# family ranking it is used with.
+MIDA = {
+    "100": ("יחידה", "יחידות"),
+    "101": ("יחידה קטנה מאד", "יחידות קטנות מאד"),
+    "102": ("יחידה קטנה", "יחידות קטנות"),
+    "103": ("יחידה בינונית", "יחידות בינוניות"),
+    "104": ("יחידה גדולה", "יחידות גדולות"),
+    "105": ("יחידה גדולה מאד", "יחידות גדולות מאד"),
+    "200": ("כוס", "כוסות"),
+    "201": ("כוס מידה", "כוסות מידה"),
+    "202": ("ספל", "ספלים"),
+    "203": ("ספל למרק", "ספלים למרק"),
+    "204": ("כוס ליין", "כוסות ליין"),
+    "205": ("כוס קוביות", "כוסות קוביות"),
+    "206": ("כוס פרוסות", "כוסות פרוסות"),
+    "207": ("כוס קצוץ", "כוסות קצוץ"),
+    "208": ("כוס מעוך", "כוסות מעוך"),
+    "209": ("כוסית ליין", "כוסיות ליין"),
+    "300": ("כף", "כפות"),
+    "301": ("כף שטוחה", "כפות שטוחות"),
+    "302": ("כף גדושה", "כפות גדושות"),
+    "307": ("מצקת גדולה", "מצקות גדולות"),
+    "308": ("כף מידה", "כפות מידה"),
+    "400": ("כפית", "כפיות"),
+    "401": ("כפית שטוחה", "כפיות שטוחות"),
+    "402": ("כפית גדושה", "כפיות גדושות"),
+    "500": ("פרוסה", "פרוסות"),
+    "501": ("פרוסה דקה", "פרוסות דקות"),
+    "502": ("פרוסה בינונית", "פרוסות בינוניות"),
+    "503": ("פרוסה עבה", "פרוסות עבות"),
+    "600": ("גביע", "גביעים"),
+    "601": ("גביע קטן מאד", "גביעים קטנים מאד"),
+    "602": ("גביע קטן", "גביעים קטנים"),
+    "603": ("גביע בינוני", "גביעים בינוניים"),
+    "604": ("גביע גדול", "גביעים גדולים"),
+    "605": ("גביע מחולק", "גביעים מחולקים"),
+    "800": ("מנה", "מנות"),
+    "801": ("מנה קטנה", "מנות קטנות"),
+    "802": ("מנה בינונית", "מנות בינוניות"),
+    "803": ("מנה גדולה", "מנות גדולות"),
+    "900": ("אריזה", "אריזות"),
+    "901": ("חבילה", "חבילות"),
+    "902": ("חפיסה", "חפיסות"),
+    "903": ("שקית", "שקיות"),
+    "904": ("קרטון", "קרטונים"),
+    "905": ("אריזה אישית", "אריזות אישיות"),
+    "906": ("קופסה", "קופסאות"),
+    "907": ("שפורפרת", "שפורפרות"),
+    "908": ("צנצנת", "צנצנות"),
+    "909": ("קרטון קטן", "קרטונים קטנים"),
+    "910": ("קרטון גדול", "קרטונים גדולים"),
+    "911": ("אריזה/שקית קטנה", "אריזות/שקיות קטנות"),
+    "912": ("אריזה גדולה", "אריזות גדולות"),
+    "1001": ("צלחת קטנה", "צלחות קטנות"),
+    "1002": ("צלחת בינונית", "צלחות בינוניות"),
+    "1003": ("צלחת גדולה", "צלחות גדולות"),
+    "1004": ("צלחת למרק", "צלחות למרק"),
+    "1005": ("קערית מרק", "קעריות מרק"),
+    "1006": ("קערית לפתן", "קעריות לפתן"),
+    "1007": ("קערית חד-פעמית", "קעריות חד-פעמיות"),
+    "1100": ("בקבוק", "בקבוקים"),
+    "1101": ("בקבוק קטן", "בקבוקים קטנים"),
+    "1102": ("בקבוק בינוני", "בקבוקים בינוניים"),
+    "1103": ("בקבוק גדול", "בקבוקים גדולים"),
+    "1104": ("פחית", "פחיות"),
+    "1106": ("פחית גדולה", "פחיות גדולות"),
+    "1201": ("גבעול", "גבעולים"),
+    "1202": ("פס/מקל", "פסים/מקלות"),
+    "1203": ("עלה", "עלים"),
+    "1204": ("עיגול/כדור", "עיגולים/כדורים"),
+    "1205": ("פלח", "פלחים"),
+    "1206": ("משולש", "משולשים"),
+    "1207": ("ריבוע/ קוביה", "ריבועים/ קוביות"),
+    "1208": ("אצבע", "אצבעות"),
+    "1209": ("גליל", "גלילים"),
+    "1210": ("טבליה", "טבליות"),
+    "1211": ("שן", "שיניים"),
+    "1212": ("פרח", "פרחים"),
+    "1213": ("מקל עבה", "מקלות עבים"),
+    "1214": ("מקל דק", "מקלות דקים"),
+    "1215": ("ראש", "ראשים"),
+    "1216": ("טיפה", "טיפות"),
+    "1217": ("קלח", "קלחים"),
+    "1229": ("פילה קטן", "פילה קטנים"),
+    "1230": ("פילה בינוני", "פילה בינוניים"),
+    "1231": ("פילה גדול", "פילה גדולים"),
+    "1232": ("קטן ללא עצם", "קטנים ללא עצם"),
+    "1235": ("קטן שלם", "קטנים שלמים"),
+    "1236": ("בינוני שלם", "בינוניים שלמים"),
+    "1237": ("גדול שלם", "גדולים שלמים"),
+}
+
+PSEUDO_UNITS = ("700", "2000")          # gram and kilogram — never a serving
+PSEUDO_UNITS_SQL = ", ".join(f"'{c}'" for c in PSEUDO_UNITS)
+
+
+def _sql_str(value):
+    return "'" + value.replace("'", "''") + "'"
+
+
+# The table as a VALUES list, joined against src_servings in the INSERT below.
+MIDA_VALUES_SQL = ",\n                 ".join(
+    f"({_sql_str(code)}, {_sql_str(label)}, {_sql_str(plural)})"
+    for code, (label, plural) in MIDA.items())
+
+MIDA_CODES_SQL = ", ".join(_sql_str(code) for code in MIDA)
+
 STEPS = [
     # food_curation is NOT on this list, and it has no foreign key to foods, so
     # TRUNCATE ... CASCADE cannot reach it. Both halves of that are load-bearing.
@@ -221,13 +361,22 @@ STEPS = [
           AND (sf.raw->>'carbohydrates' ~ '{NUM}'
                OR sf.code IN ({CARB_ZERO_SQL}))"""),
 
-    ("food_servings — excluding 700 (gram) and 2000 (kilogram)", """
-        INSERT INTO food_servings (food_id, mida_code, label_he, grams)
-        SELECT f.id, s.mida_code, m.label_he, s.grams
+    # Labels and plurals come from MIDA, not from src_mida. The join is against
+    # the table above so that a code missing from it produces no row at all —
+    # which stop condition 4 then catches and rolls the run back, rather than
+    # letting the item quietly lose a serving unit. src_mida is still the
+    # authority on which codes exist; MIDA is the authority on what they are
+    # called and how they are pluralised.
+    ("food_servings — labels and plurals from MIDA, excluding 700 and 2000", f"""
+        INSERT INTO food_servings (food_id, mida_code, label_he,
+                                   label_he_plural, grams)
+        SELECT f.id, s.mida_code, m.label_he, m.label_he_plural, s.grams
         FROM src_servings s
-        JOIN foods f    ON f.source_code = s.code
-        JOIN src_mida m ON m.mida_code   = s.mida_code
-        WHERE s.mida_code NOT IN ('700','2000')
+        JOIN foods f ON f.source_code = s.code
+        JOIN (VALUES {MIDA_VALUES_SQL}
+             ) AS m(mida_code, label_he, label_he_plural)
+          ON m.mida_code = s.mida_code
+        WHERE s.mida_code NOT IN ({PSEUDO_UNITS_SQL})
           AND s.grams > 0
         ON CONFLICT (food_id, label_he) DO NOTHING"""),
 
@@ -403,6 +552,18 @@ CHECKS = [
                                      ' · ' ORDER BY s.grams) units
         FROM foods f JOIN food_servings s ON s.food_id = f.id
         GROUP BY f.id, f.name_he ORDER BY f.id LIMIT 5"""),
+
+    # The thirteenth block, added 29.08.2026 with MIDA. plural_missing must be
+    # 0: the column was NULL on all 9,864 rows before this table existed, and a
+    # non-zero here means a row got past the join with no plural attached.
+    ("Serving-unit plurals — expected: plural_missing 0, distinct codes 88", """
+        SELECT count(*) AS total,
+               count(*) FILTER (WHERE label_he_plural IS NULL
+                                   OR btrim(label_he_plural) = '') AS plural_missing,
+               count(DISTINCT mida_code) AS distinct_codes,
+               count(DISTINCT label_he)  AS distinct_labels,
+               count(*) FILTER (WHERE label_he ~ '\\s\\s')          AS double_spaced
+        FROM food_servings"""),
 ]
 
 # Which source rows never reached foods, and which macro is to blame. Read by
@@ -435,13 +596,35 @@ MISSING_MACRO_SQL = f"""
     WHERE NOT EXISTS (SELECT 1 FROM foods f WHERE f.source_code = sf.code)
     ORDER BY sf.code::int"""
 
+# Which mida codes would reach food_servings but have no row in MIDA. Same
+# argument as MISSING_MACRO_SQL and the same shape: the INSERT joins MIDA, so an
+# unknown code cannot fail — the serving row simply never arrives, and an item
+# quietly loses a unit it has in the source. src_mida supplies the label so the
+# failure message can name the thing, not only its number.
+#
+# Restricted to codes that would actually have produced a row: the item has to
+# have reached foods and the grams have to be positive, or the condition would
+# fire on source rows the INSERT was never going to admit. The pseudo-units are
+# excluded here for the same reason they are excluded there — they are filtered
+# before the table is consulted and are not expected to be in it.
+MISSING_MIDA_SQL = f"""
+    SELECT DISTINCT s.mida_code, COALESCE(m.label_he, '(not in src_mida)') AS label,
+           count(*) OVER (PARTITION BY s.mida_code) AS rows_affected
+    FROM src_servings s
+    LEFT JOIN src_mida m ON m.mida_code = s.mida_code
+    WHERE s.mida_code NOT IN ({PSEUDO_UNITS_SQL})
+      AND s.grams > 0
+      AND s.mida_code NOT IN ({MIDA_CODES_SQL})
+      AND EXISTS (SELECT 1 FROM foods f WHERE f.source_code = s.code)
+    ORDER BY s.mida_code"""
+
 # The stop conditions live in main(), not here, because they are not queries
 # whose output gets printed — they decide whether the run is allowed to commit.
 # See check_stop_conditions().
 
 
 def check_stop_conditions(cur, out, curation_before):
-    """The three conditions that abort the run. Returns a list of failures.
+    """The four conditions that abort the run. Returns a list of failures.
 
     These are not informative checks. Conditions 1 and 2 stand in for a foreign
     key: food_curation deliberately carries none to foods — a FK would conduct
@@ -455,9 +638,12 @@ def check_stop_conditions(cur, out, curation_before):
     food_curation: a source row that never reached foods at all. It was an
     ordinary printed check until 29.08.2026, and the same argument moved it
     here — see open-questions.md #15 and MISSING_MACRO_SQL.
+
+    Condition 4 is the same failure mode one table over: a mida code the source
+    uses and MIDA does not know. Added 29.08.2026 with the plural table.
     """
     failures = []
-    out.write("\n▸ Stop conditions — the run is rolled back if any of the three fails\n")
+    out.write("\n▸ Stop conditions — the run is rolled back if any of the four fails\n")
 
     # 1. What replaces the foreign key. A curation row whose source_code is no
     #    longer in foods means this import dropped an item out from under
@@ -510,6 +696,25 @@ def check_stop_conditions(cur, out, curation_before):
     else:
         out.write(f"    ✓ every src_foods row reached foods — no macro blank "
                   f"outside the {len(CARB_ZERO_BY_JUDGEMENT)} judged codes\n")
+
+    # 4. A mida code the source writes and MIDA has no row for. The INSERT joins
+    #    MIDA, so the serving row would not fail — it would never be created,
+    #    and the item would lose a unit it has in the file. Naming both the code
+    #    and its source label is the point: "1218 is missing" sends the reader
+    #    back to the dictionary, "1218 | קוביה קטנה" does not.
+    cur.execute(MISSING_MIDA_SQL)
+    unknown = cur.fetchall()
+    if unknown:
+        rows = "\n".join(f"        {code} | {label} | {n} rows"
+                         for code, label, n in unknown[:50])
+        failures.append(
+            f"{len(unknown)} mida codes reach food_servings with no row in "
+            f"MIDA. Every one of them needs a label and a Hebrew plural before "
+            f"the database is rebuilt without it — the plural is a judgement, "
+            f"not a code change:\n{rows}")
+    else:
+        out.write(f"    ✓ every mida code written has a row in MIDA — "
+                  f"{len(MIDA)} units, label and plural\n")
 
     return failures
 

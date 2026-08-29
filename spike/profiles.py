@@ -27,8 +27,14 @@ def make(i):
         kosher=random.choices(["none", "kosher", "separated"], [.45, .3, .25])[0],
         cooking=random.choices(["minimal", "medium", "loves"], [.3, .5, .2])[0],
         budget=random.choices(["cheap", "normal", "any"], [.25, .55, .2])[0],
-        allergies=random.sample(ALL_ALLERGENS, random.choice([0, 0, 0, 1, 1, 2])),
-        dislikes=random.sample(NAMES, random.choice([0, 1, 2, 3, 5, 8])),
+        # Clamped to what the pool actually holds. random.sample raises when k
+        # exceeds the population, and the pool is 63 items on the seed path but
+        # can be a handful on the exported one. No effect on the seed run: the
+        # largest k is 8 against 63 names and 2 against 8 allergens.
+        allergies=random.sample(ALL_ALLERGENS,
+                                min(random.choice([0, 0, 0, 1, 1, 2]), len(ALL_ALLERGENS))),
+        dislikes=random.sample(NAMES,
+                               min(random.choice([0, 1, 2, 3, 5, 8]), len(NAMES))),
         wake=random.choice(["05:30", "06:30", "07:00", "08:00", "10:00"]),
         sleep=random.choice(["22:00", "23:00", "00:00", "01:00"]),
     )

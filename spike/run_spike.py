@@ -1,18 +1,35 @@
 # -*- coding: utf-8 -*-
 """
 Spike harness - exercises every deterministic layer over 100 profiles.
-No API key needed. Run:  python3 run_spike.py
+No API key needed, on either path. Run:
+
+    python3 run_spike.py                # the 63-item seed, the default
+    python3 run_spike.py --source db    # spike/menu_foods.py, from production
+
+The source is selected BEFORE the other modules are imported: filters.py binds
+foods.FOODS at import time, so the swap has to happen first. See food_source.py.
 """
+import argparse
 import statistics as st
-from engine import targets, split_meals, meal_times, SafetyBlock
-from filters import eligible, validate, pool_health, sample_for_prompt
-from foods import FOODS, macros_for
-from profiles import PROFILES
+
+import food_source
+
+_ap = argparse.ArgumentParser(description="Spike harness over 100 profiles.")
+food_source.add_argument(_ap)
+SOURCE = food_source.activate(_ap.parse_args().source)
+
+from engine import targets, split_meals, meal_times, SafetyBlock       # noqa: E402
+from filters import eligible, validate, pool_health, sample_for_prompt  # noqa: E402
+from foods import FOODS, macros_for                                     # noqa: E402
+from profiles import PROFILES                                           # noqa: E402
 
 
 def bar(t, w=68):
     print("\n" + t)
     print("=" * w)
+
+
+print(f"Food source: {SOURCE}")
 
 
 # ------------------------------------------------------------ 1. engine
@@ -92,43 +109,59 @@ p0 = next(p for p, _ in ok_rows if not p["allergies"] and not p["dislikes"]
 pool0 = eligible(p0)
 by = {f["name"]: f for f in FOODS}
 
-good = [{"name": "Breakfast", "items": [{"food": "Egg", "grams": 104},
-                                        {"food": "Whole wheat bread", "grams": 60}]}]
-ref = {"kcal": sum(macros_for(by[i["food"]], i["grams"])["kcal"] for m in good for i in m["items"]),
-       "protein": sum(macros_for(by[i["food"]], i["grams"])["protein"] for m in good for i in m["items"])}
+# Sections 4 and 5 are written against named seed items - a specific egg, a
+# specific slice of bread, a specific yellow cheese - because the cases they
+# exercise (allergen leak, meat with dairy) need foods with known tags. On the
+# exported path those names do not exist, and inventing equivalents here would
+# be writing a second, weaker test. They are skipped and said to be skipped.
+CASE_FOODS = ["Egg", "Whole wheat bread", "Chicken breast", "Yellow cheese 28%"]
+_missing = [n for n in CASE_FOODS if n not in by]
+if _missing:
+    print(f"   SKIPPED - sections 4 and 5 are written against the seed items, "
+          f"and this pool has none of them.")
+    print(f"   Missing: {', '.join(_missing)}")
 
-cases = [
-    ("valid menu", good, ref, True),
-    ("calories 40% over", good, {"kcal": ref["kcal"] * 1.4, "protein": ref["protein"]}, False),
-    ("protein way off", good, {"kcal": ref["kcal"], "protein": ref["protein"] * 1.5}, False),
-    ("food not in database",
-     [{"name": "Breakfast", "items": [{"food": "Margherita pizza", "grams": 200}]}], ref, False),
-    ("empty menu", [], ref, False),
-]
-for label, menu, tgt, want_ok in cases:
-    ok, errs = validate(menu, p0, tgt, pool0)
-    mark = "PASS" if ok == want_ok else "TEST FAILED"
-    print(f"   [{mark}] {label:<24} -> {'accepted' if ok else errs[0][:46]}")
+if not _missing:
+    good = [{"name": "Breakfast", "items": [{"food": "Egg", "grams": 104},
+                                            {"food": "Whole wheat bread", "grams": 60}]}]
+    ref = {"kcal": sum(macros_for(by[i["food"]], i["grams"])["kcal"] for m in good for i in m["items"]),
+           "protein": sum(macros_for(by[i["food"]], i["grams"])["protein"] for m in good for i in m["items"])}
+
+    cases = [
+        ("valid menu", good, ref, True),
+        ("calories 40% over", good, {"kcal": ref["kcal"] * 1.4, "protein": ref["protein"]}, False),
+        ("protein way off", good, {"kcal": ref["kcal"], "protein": ref["protein"] * 1.5}, False),
+        ("food not in database",
+         [{"name": "Breakfast", "items": [{"food": "Margherita pizza", "grams": 200}]}], ref, False),
+        ("empty menu", [], ref, False),
+    ]
+    for label, menu, tgt, want_ok in cases:
+        ok, errs = validate(menu, p0, tgt, pool0)
+        mark = "PASS" if ok == want_ok else "TEST FAILED"
+        print(f"   [{mark}] {label:<24} -> {'accepted' if ok else errs[0][:46]}")
 
 # ------------------------------------------------------- 5. allergen leak
 bar("5. ALLERGEN LEAK TEST - the most important one")
-p_al = dict(p0)
-p_al["allergies"] = ["Eggs"]
-pool_al = eligible(p_al)
-leaked = any(f["name"] == "Egg" for f in pool_al)
-print(f"   'Egg' present in filtered pool?  "
-      f"{'LEAKED!' if leaked else 'No - blocked at the filter layer'}")
-ok, errs = validate(good, p_al, ref, pool_al)
-print(f"   Validator on egg-containing menu: "
-      f"{'ACCEPTED - BUG!' if ok else [e for e in errs if 'ALLERGEN' in e][0]}")
+if _missing:
+    print("   SKIPPED - see section 4.")
+else:
+    p_al = dict(p0)
+    p_al["allergies"] = ["Eggs"]
+    pool_al = eligible(p_al)
+    leaked = any(f["name"] == "Egg" for f in pool_al)
+    print(f"   'Egg' present in filtered pool?  "
+          f"{'LEAKED!' if leaked else 'No - blocked at the filter layer'}")
+    ok, errs = validate(good, p_al, ref, pool_al)
+    print(f"   Validator on egg-containing menu: "
+          f"{'ACCEPTED - BUG!' if ok else [e for e in errs if 'ALLERGEN' in e][0]}")
 
-p_k = dict(p0)
-p_k["kosher"] = "separated"
-mix = [{"name": "Lunch", "items": [{"food": "Chicken breast", "grams": 150},
-                                   {"food": "Yellow cheese 28%", "grams": 50}]}]
-ok, errs = validate(mix, p_k, {"kcal": 423, "protein": 59}, eligible(p_k))
-print(f"   Meat + dairy in one meal:        "
-      f"{'ACCEPTED - BUG!' if ok else [e for e in errs if 'KOSHER' in e][0]}")
+    p_k = dict(p0)
+    p_k["kosher"] = "separated"
+    mix = [{"name": "Lunch", "items": [{"food": "Chicken breast", "grams": 150},
+                                       {"food": "Yellow cheese 28%", "grams": 50}]}]
+    ok, errs = validate(mix, p_k, {"kcal": 423, "protein": 59}, eligible(p_k))
+    print(f"   Meat + dairy in one meal:        "
+          f"{'ACCEPTED - BUG!' if ok else [e for e in errs if 'KOSHER' in e][0]}")
 
 # --------------------------------------------------------- 6. meal split
 bar("6. MEAL SPLIT AND TIMING")

@@ -37,9 +37,11 @@ What goes where:
 What this script must never touch:
   food_curation    — every hand-made tagging field. It is not in the TRUNCATE
                      list and has no foreign key to foods, so CASCADE cannot
-                     reach it. Two stop conditions at the end prove that on
-                     every run and roll the run back if either fails. See
-                     db/06_split_curation.sql for why the FK is absent.
+                     reach it. Two of the three stop conditions at the end prove
+                     that on every run and roll the run back if either fails.
+                     See db/06_split_curation.sql for why the FK is absent.
+                     The third condition guards the opposite direction — a
+                     source row that never reached foods — and is unrelated.
 
 makor decoding (from "מבנה קובץ מצרכים.xlsx", Ministry of Health):
   1 USA (NDB, FNDDS)              → ingredient
@@ -52,9 +54,12 @@ makor decoding (from "מבנה קובץ מצרכים.xlsx", Ministry of Health):
   Structural detection (a Code appearing as a recipe in the composition file)
   overrides makor.
 
-Excluded from foods: any entry missing protein, fat or energy. It stays in
-src_foods and is listed in the report. A blank carbohydrate excludes too,
-except for the four items in CARB_ZERO_BY_JUDGEMENT — see the comment there.
+Excluded from foods: any entry missing protein, fat or energy. A blank
+carbohydrate excludes too, except for the four items in CARB_ZERO_BY_JUDGEMENT —
+see the comment there. Such an entry is no longer merely reported: since
+29.08.2026 it is the third stop condition and rolls the whole run back. carb_g
+is NOT NULL on foods, so without it a new meat item in a source update would be
+dropped in silence.
 """
 
 import io
@@ -145,13 +150,18 @@ AMINO_CODES_SQL = ", ".join(f"'{code}'" for code in ESSENTIAL_AMINO_ACIDS)
 # actually hidden a real carbohydrate value, the derived energy would fall short
 # of the declared one by exactly the missing 4 kcal per gram.
 #
-# Deliberately an explicit list and NOT the general rule. The general rule —
-# "meat or fish category, no recipe components, blank carbohydrate" — is
-# open-questions.md #15 and has not been decided. Measured against production on
-# 29.08.2026: these four are the ONLY rows the file drops for a missing macro
-# (src_foods 4,624, foods 4,620), so the list and the rule would currently build
-# an identical database. When #15 is decided, replace this tuple; until then a
-# tuple is what the decision covers.
+# Deliberately an explicit list and NOT the general rule. open-questions.md #15
+# was decided on 29.08.2026 and the decision KEEPS the list: the rule's wording
+# lost its "no recipe components" clause once three of these four turned out to
+# carry one, and a clause that loose has no business admitting rows on its own.
+# What the decision added instead is the third stop condition in
+# check_stop_conditions() — a source row with a blank macro that is not named
+# here aborts the run rather than vanishing from foods.
+#
+# Measured against production on 29.08.2026: these four are the ONLY rows the
+# file drops for a missing macro (src_foods 4,624 and foods 4,624 with them
+# restored). Adding a fifth code here is a signed nutritional judgement; the
+# stop condition is what forces that judgement to be made rather than skipped.
 CARB_ZERO_BY_JUDGEMENT = ("638", "1134", "9691", "9784")
 CARB_ZERO_SQL = ", ".join(f"'{code}'" for code in CARB_ZERO_BY_JUDGEMENT)
 
@@ -352,20 +362,6 @@ CHECKS = [
                count(*) FILTER (WHERE NOT complete) AS incomplete
         FROM foods"""),
 
-    # Expected to print nothing since 29.08.2026. The only four rows the file
-    # ever dropped are CARB_ZERO_BY_JUDGEMENT, and they are now loaded. A row
-    # appearing here means a source update introduced a new gap — which is
-    # exactly the moment open-questions.md #15 stops being theoretical.
-    ("Excluded from foods — a macro is missing. Expected: none", """
-        SELECT sf.code, sf.raw->>'shmmitzrach' name,
-               CASE WHEN sf.raw->>'protein'       IS NULL THEN 'protein '      ELSE '' END ||
-               CASE WHEN sf.raw->>'total_fat'     IS NULL THEN 'fat '          ELSE '' END ||
-               CASE WHEN sf.raw->>'carbohydrates' IS NULL THEN 'carbs '        ELSE '' END ||
-               CASE WHEN sf.raw->>'food_energy'   IS NULL THEN 'energy'        ELSE '' END missing
-        FROM src_foods sf
-        WHERE NOT EXISTS (SELECT 1 FROM foods f WHERE f.source_code = sf.code)
-        ORDER BY sf.code::int LIMIT 20"""),
-
     # The judgement, shown rather than asserted. carb_g must read 0 and the
     # derived kcal must land within ~1% of the file's declared energy — if a
     # real carbohydrate value were hiding behind the blank, kcal would fall
@@ -409,24 +405,59 @@ CHECKS = [
         GROUP BY f.id, f.name_he ORDER BY f.id LIMIT 5"""),
 ]
 
+# Which source rows never reached foods, and which macro is to blame. Read by
+# stop condition 3 and by nothing else — it deliberately does NOT sit in CHECKS,
+# because printing this was the bug: carb_g is NOT NULL, so a source row with a
+# blank macro cannot fail the INSERT, it simply never arrives, and a report
+# nobody reads in time is not a guard. See open-questions.md #15.
+#
+# Each CASE mirrors the INSERT's own predicate — the regex, not IS NULL. The
+# source stores a blank as an empty string at least as often as a JSON null, and
+# an IS NULL test would name no field at all on those rows: a failure message
+# reading "a macro is missing" and nothing else sends the reader back to
+# searching by hand. COALESCE because `!~` yields NULL, not true, on a NULL.
+# The carbohydrate arm carries the CARB_ZERO_BY_JUDGEMENT exemption, so a listed
+# code is never reported as missing a carbohydrate it was ruled to have as zero.
+MISSING_MACRO_SQL = f"""
+    SELECT sf.code, sf.raw->>'shmmitzrach' AS name,
+           trim(
+             CASE WHEN COALESCE(sf.raw->>'protein','')       !~ '{NUM}'
+                  THEN 'protein ' ELSE '' END ||
+             CASE WHEN COALESCE(sf.raw->>'total_fat','')     !~ '{NUM}'
+                  THEN 'fat ' ELSE '' END ||
+             CASE WHEN COALESCE(sf.raw->>'carbohydrates','') !~ '{NUM}'
+                   AND sf.code NOT IN ({CARB_ZERO_SQL})
+                  THEN 'carbs ' ELSE '' END ||
+             CASE WHEN COALESCE(sf.raw->>'food_energy','')   !~ '{NUM}'
+                  THEN 'energy' ELSE '' END
+           ) AS missing
+    FROM src_foods sf
+    WHERE NOT EXISTS (SELECT 1 FROM foods f WHERE f.source_code = sf.code)
+    ORDER BY sf.code::int"""
+
 # The stop conditions live in main(), not here, because they are not queries
 # whose output gets printed — they decide whether the run is allowed to commit.
 # See check_stop_conditions().
 
 
 def check_stop_conditions(cur, out, curation_before):
-    """The two conditions that abort the run. Returns a list of failures.
+    """The three conditions that abort the run. Returns a list of failures.
 
-    These are not informative checks. food_curation deliberately carries no
-    foreign key to foods — a FK would conduct the TRUNCATE ... CASCADE rather
-    than block it, which is the whole bug db/06_split_curation.sql closed. The
-    integrity a FK would have given is enforced here instead, and it has to be
-    enforced loudly: a stop condition that only prints is worth nothing, since
-    the damage it reports has already been committed by the time anyone reads
-    the report.
+    These are not informative checks. Conditions 1 and 2 stand in for a foreign
+    key: food_curation deliberately carries none to foods — a FK would conduct
+    the TRUNCATE ... CASCADE rather than block it, which is the whole bug
+    db/06_split_curation.sql closed. The integrity a FK would have given is
+    enforced here instead, and it has to be enforced loudly: a stop condition
+    that only prints is worth nothing, since the damage it reports has already
+    been committed by the time anyone reads the report.
+
+    Condition 3 guards the opposite direction and has nothing to do with
+    food_curation: a source row that never reached foods at all. It was an
+    ordinary printed check until 29.08.2026, and the same argument moved it
+    here — see open-questions.md #15 and MISSING_MACRO_SQL.
     """
     failures = []
-    out.write("\n▸ Stop conditions — the run is rolled back if either fails\n")
+    out.write("\n▸ Stop conditions — the run is rolled back if any of the three fails\n")
 
     # 1. What replaces the foreign key. A curation row whose source_code is no
     #    longer in foods means this import dropped an item out from under
@@ -458,6 +489,27 @@ def check_stop_conditions(cur, out, curation_before):
     else:
         out.write(f"    ✓ food_curation — {curation_before} rows before, "
                   f"{curation_after} after\n")
+
+    # 3. Rule #15, enforced rather than reported. The four codes in
+    #    CARB_ZERO_BY_JUDGEMENT are the only source rows a missing macro is
+    #    allowed to touch; anything else here is a source update that introduced
+    #    a new gap, and it must be ruled on before the database is rebuilt
+    #    around its absence. Decided 29.08.2026 — see docs/decisions.md,
+    #    "תיקון לנוסח כלל #15", and docs/spec/05-food-db.md §5.0.1.
+    cur.execute(MISSING_MACRO_SQL)
+    dropped = cur.fetchall()
+    if dropped:
+        rows = "\n".join(f"        {code} | {name} | missing: {missing}"
+                         for code, name, missing in dropped[:50])
+        failures.append(
+            f"{len(dropped)} src_foods rows never reached foods — a macro is "
+            f"blank and the code is not in CARB_ZERO_BY_JUDGEMENT. Either the "
+            f"source file changed, or the item belongs on that list under rule "
+            f"#15. Deciding that is a nutritional judgement, not a code "
+            f"change:\n{rows}")
+    else:
+        out.write(f"    ✓ every src_foods row reached foods — no macro blank "
+                  f"outside the {len(CARB_ZERO_BY_JUDGEMENT)} judged codes\n")
 
     return failures
 

@@ -155,8 +155,19 @@ FAMILIES = [
     # The supplement rule comes first because group 1183 sits inside group 11.
     # Its floor of 50 g protein is what separates a protein powder from the
     # enteral formulas and cocoa powders that share the group.
+    #
+    # 414400 AND 414401 — the split is arbitrary and reading only the first half
+    # was a real defect. 414400 holds 1720 (soy protein, 47 g, below the floor)
+    # and 1723 (Ensure Plus, 5.2 g); the three soy powders that actually matter
+    # sit in 414401: 1724 isolate 80.7 g, 8274 concentrate 63.6 g, and 1726, an
+    # industrial full-fat soy powder at 41 g. Without 414401 all three fall
+    # through to legumes, where 1724 and 8274 took 2 of the 10 slots — the
+    # inverse of spec/05-food-db.md §5.0.2, since legumes are the depth the
+    # narrow track exists to build. The floor still does its work inside the
+    # family: 1726 is caught here and dropped at 50 g, which is the right
+    # outcome — an industrial powder is not an edible form.
     ("protein powders",       "protein",  4, lambda r: (r["p4"] == "1183"
-                                                        or r["p6"] == "414400"
+                                                        or r["p6"] in ("414400", "414401")
                                                         or r["source_code"] == "8547"),
      {"protein_g": 50}),
     ("poultry",               "protein", 12, lambda r: r["p2"] == "24",                   {}),

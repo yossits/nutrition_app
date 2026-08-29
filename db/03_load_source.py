@@ -4,7 +4,7 @@
 Postgres.
 
 What it does:
-  1. Connects using DATABASE_URL (environment variable)
+  1. Connects using DATABASE_URL, read from .env — see db/_env.py
   2. If the schema is missing — runs 01_food_db_schema.sql
   3. TRUNCATEs src_* and reloads the 4 data files from db/source
      (identified by their headers, not by file name)
@@ -15,15 +15,20 @@ What it does not do:
   Does not touch the core tables (foods and friends). That is the transform —
   step 04, separate.
 
-Run (from the repo root).
-DATABASE_URL is the Supabase session pooler string; the direct host,
+Run (from the repo root). The DSN is read from .env at the repository root —
+see db/_env.py, which also explains why .env overrides the ambient
+DATABASE_URL rather than filling in for it. .env is gitignored; the value is
+never printed, only masked.
+
+  # .env, UTF-8, one line
+  DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+
+  python db\\03_load_source.py
+
+That is the Supabase session pooler string; the direct host,
 db.<ref>.supabase.co, resolves to IPv6 only. The user is postgres.<ref>,
 not plain postgres, and the port is 5432 — not the 6543 transaction pooler,
 which does not hold psycopg's prepared statements.
-
-  $env:DATABASE_URL =
-      "postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
-  python db\\03_load_source.py
 
 Files are identified by their headers:
   shmmitzrach + protein            → src_foods                (ingredients, 85 columns)
@@ -43,6 +48,9 @@ try:
     import psycopg
 except ImportError:
     sys.exit("psycopg is missing. Run:  pip install \"psycopg[binary]\"")
+
+# sys.path[0] is db/ when this is run as `python db/03_load_source.py`.
+from _env import load_database_url, mask_dsn
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -216,11 +224,7 @@ def run_checks(cur, out):
 # -------------------------------------------------------------------- main --
 
 def main():
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        sys.exit("DATABASE_URL is missing. The session pooler string:\n"
-                 '  $env:DATABASE_URL = "postgresql://postgres.<ref>:<password>'
-                 '@aws-0-<region>.pooler.supabase.com:5432/postgres"')
+    url = load_database_url()
 
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "source"
     files = sorted(p for p in src.glob("*.csv"))
@@ -228,7 +232,12 @@ def main():
         sys.exit(f"No csv files inside {src}")
 
     out = io.StringIO()
-    with psycopg.connect(url) as conn:
+    try:
+        conn_ctx = psycopg.connect(url)
+    except psycopg.OperationalError as exc:
+        sys.exit(f"Cannot connect to {mask_dsn(url)}\n{exc}")
+
+    with conn_ctx as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT to_regclass('public.src_foods')")
             if cur.fetchone()[0] is None:

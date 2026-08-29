@@ -7,14 +7,19 @@ nutrients · foods · food_servings · food_nutrients · food_recipe_components.
 The src_* tables are left untouched.
 
 Run.
-DATABASE_URL is the Supabase session pooler string; the direct host,
+The DSN is read from .env at the repository root — see db/_env.py, which also
+explains why .env overrides the ambient DATABASE_URL rather than filling in for
+it. .env is gitignored; the value is never printed, only masked.
+
+  # .env, UTF-8, one line
+  DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+
+  python db\\04_transform.py
+
+That is the Supabase session pooler string; the direct host,
 db.<ref>.supabase.co, resolves to IPv6 only. The user is postgres.<ref>,
 not plain postgres, and the port is 5432 — not the 6543 transaction pooler,
 which does not hold psycopg's prepared statements.
-
-  $env:DATABASE_URL =
-      "postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
-  python db\\04_transform.py
 
 What goes where:
   foods            — identifiers, macros, makor, class_code, derived source
@@ -47,8 +52,9 @@ makor decoding (from "מבנה קובץ מצרכים.xlsx", Ministry of Health):
   Structural detection (a Code appearing as a recipe in the composition file)
   overrides makor.
 
-Excluded from foods: any entry missing one of the four macros. It stays in
-src_foods and is listed in the report.
+Excluded from foods: any entry missing protein, fat or energy. It stays in
+src_foods and is listed in the report. A blank carbohydrate excludes too,
+except for the four items in CARB_ZERO_BY_JUDGEMENT — see the comment there.
 """
 
 import io
@@ -60,6 +66,9 @@ try:
     import psycopg
 except ImportError:
     sys.exit("psycopg is missing. Run:  pip install \"psycopg[binary]\"")
+
+# sys.path[0] is db/ when this is run as `python db/04_transform.py`.
+from _env import load_database_url, mask_dsn
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -121,6 +130,31 @@ ESSENTIAL_AMINO_ACIDS = (
 )
 AMINO_CODES_SQL = ", ".join(f"'{code}'" for code in ESSENTIAL_AMINO_ACIDS)
 
+# Four items the source leaves the carbohydrate field blank on. In muscle meat
+# and pure fish an empty carbohydrate reads as zero, not as missing data — a
+# signed nutritional judgement, decided 28.08.2026, closing open question #14.
+# See docs/decisions.md and docs/spec/05-food-db.md §5.0.1.
+#
+#   638   בשר בקר, פילה שריר, מבושל      P 35.5  F 19   → derives 313 vs file 315
+#   1134  דג דניס-צ'יפורה, לא מבושל      P 21    F 4.9  → derives 128 vs file 128
+#   9691  דג דניס-צ'יפורה, מבושל עם מלח  P 27.3  F 6.4  → derives 167 vs file 166
+#   9784  דג דניס בגריל, ללא ציפוי       P 27.3  F 6.4  → derives 167 vs file 166
+#
+# All four land within 1% of the file's declared energy once carbohydrate is
+# read as zero. That agreement is the check on the judgement: had the blank
+# actually hidden a real carbohydrate value, the derived energy would fall short
+# of the declared one by exactly the missing 4 kcal per gram.
+#
+# Deliberately an explicit list and NOT the general rule. The general rule —
+# "meat or fish category, no recipe components, blank carbohydrate" — is
+# open-questions.md #15 and has not been decided. Measured against production on
+# 29.08.2026: these four are the ONLY rows the file drops for a missing macro
+# (src_foods 4,624, foods 4,620), so the list and the rule would currently build
+# an identical database. When #15 is decided, replace this tuple; until then a
+# tuple is what the decision covers.
+CARB_ZERO_BY_JUDGEMENT = ("638", "1134", "9691", "9784")
+CARB_ZERO_SQL = ", ".join(f"'{code}'" for code in CARB_ZERO_BY_JUDGEMENT)
+
 STEPS = [
     # food_curation is NOT on this list, and it has no foreign key to foods, so
     # TRUNCATE ... CASCADE cannot reach it. Both halves of that are load-bearing.
@@ -136,7 +170,7 @@ STEPS = [
         TRUNCATE food_recipe_components, food_nutrients, food_servings,
                  foods, nutrients RESTART IDENTITY CASCADE"""),
 
-    ("foods — entries with all four macros present", f"""
+    ("foods — entries with protein, fat and energy present", f"""
         INSERT INTO foods (source_code, class_code, makor, source,
                            name_he, name_en,
                            kcal_source, protein_g, fat_g, carb_g,
@@ -159,7 +193,9 @@ STEPS = [
             (sf.raw->>'food_energy')::numeric,
             (sf.raw->>'protein')::numeric,
             (sf.raw->>'total_fat')::numeric,
-            (sf.raw->>'carbohydrates')::numeric,
+            CASE WHEN sf.raw->>'carbohydrates' ~ '{NUM}'
+                 THEN (sf.raw->>'carbohydrates')::numeric
+                 ELSE 0 END,          -- CARB_ZERO_BY_JUDGEMENT only; see above
             CASE WHEN sf.raw->>'total_dietary_fiber' ~ '{NUM}'
                  THEN (sf.raw->>'total_dietary_fiber')::numeric END,
             CASE WHEN sf.raw->>'total_sugars' ~ '{NUM}'
@@ -171,8 +207,9 @@ STEPS = [
         FROM src_foods sf
         WHERE sf.raw->>'protein'       ~ '{NUM}'
           AND sf.raw->>'total_fat'     ~ '{NUM}'
-          AND sf.raw->>'carbohydrates' ~ '{NUM}'
-          AND sf.raw->>'food_energy'   ~ '{NUM}'"""),
+          AND sf.raw->>'food_energy'   ~ '{NUM}'
+          AND (sf.raw->>'carbohydrates' ~ '{NUM}'
+               OR sf.code IN ({CARB_ZERO_SQL}))"""),
 
     ("food_servings — excluding 700 (gram) and 2000 (kilogram)", """
         INSERT INTO food_servings (food_id, mida_code, label_he, grams)
@@ -308,12 +345,18 @@ CHECKS = [
                count(*) FILTER (WHERE menu_eligible) AS eligible
         FROM v_kcal_outliers"""),
 
-    ("Complete proteins — 2,758 of 4,620 expected", """
+    # 2,758 of 4,620 until 29.08.2026; the four restored meat and fish items
+    # all carry the nine essential amino acids, so both totals moved by four.
+    ("Complete proteins — 2,762 of 4,624 expected", """
         SELECT count(*) FILTER (WHERE complete)     AS complete,
                count(*) FILTER (WHERE NOT complete) AS incomplete
         FROM foods"""),
 
-    ("Excluded from foods — a macro is missing. These stay in src_foods only", """
+    # Expected to print nothing since 29.08.2026. The only four rows the file
+    # ever dropped are CARB_ZERO_BY_JUDGEMENT, and they are now loaded. A row
+    # appearing here means a source update introduced a new gap — which is
+    # exactly the moment open-questions.md #15 stops being theoretical.
+    ("Excluded from foods — a macro is missing. Expected: none", """
         SELECT sf.code, sf.raw->>'shmmitzrach' name,
                CASE WHEN sf.raw->>'protein'       IS NULL THEN 'protein '      ELSE '' END ||
                CASE WHEN sf.raw->>'total_fat'     IS NULL THEN 'fat '          ELSE '' END ||
@@ -322,6 +365,17 @@ CHECKS = [
         FROM src_foods sf
         WHERE NOT EXISTS (SELECT 1 FROM foods f WHERE f.source_code = sf.code)
         ORDER BY sf.code::int LIMIT 20"""),
+
+    # The judgement, shown rather than asserted. carb_g must read 0 and the
+    # derived kcal must land within ~1% of the file's declared energy — if a
+    # real carbohydrate value were hiding behind the blank, kcal would fall
+    # short of kcal_source by 4 kcal per missing gram.
+    (f"Carbohydrate read as zero by judgement — expected {len(CARB_ZERO_BY_JUDGEMENT)} rows", f"""
+        SELECT source_code, name_he, protein_g, fat_g, carb_g, kcal, kcal_source,
+               ROUND(100 * (kcal - kcal_source) / NULLIF(kcal_source,0), 1) AS pct_gap
+        FROM foods
+        WHERE source_code IN ({CARB_ZERO_SQL})
+        ORDER BY source_code"""),
 
     ("Recipe components dropped (the component never reached foods)", """
         SELECT count(*) FROM src_recipe_components rc
@@ -409,13 +463,18 @@ def check_stop_conditions(cur, out, curation_before):
 
 
 def main():
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        sys.exit("DATABASE_URL is missing.")
+    url = load_database_url()
 
     out = io.StringIO()
     failures = []
-    with psycopg.connect(url) as conn:
+    try:
+        conn_ctx = psycopg.connect(url)
+    except psycopg.OperationalError as exc:
+        # psycopg does not echo the password, but the DSN reaches this message
+        # from several directions. Mask on the way out rather than trusting it.
+        sys.exit(f"Cannot connect to {mask_dsn(url)}\n{exc}")
+
+    with conn_ctx as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT count(*) FROM src_foods")
             if cur.fetchone()[0] == 0:

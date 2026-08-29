@@ -26,6 +26,15 @@ CREATE TYPE kosher_type   AS ENUM ('meat', 'dairy', 'parve');
 CREATE TYPE food_category AS ENUM ('protein', 'carb', 'veg', 'fat', 'fruit', 'drink');
 CREATE TYPE source_kind   AS ENUM ('ingredient', 'recipe', 'industry');
 
+-- Why an enum and not free text on food_curation: every closed vocabulary here
+-- is an enum, every genuinely open field is text (curated_by). Free text across
+-- 116 rows invites 116 spellings of "FFQ" and cannot be counted. A new reason
+-- costs a migration, which is the point — it forces the reason through
+-- docs/decisions.md before it reaches the data.
+CREATE TYPE exclusion_reason AS ENUM (
+    'ffq'       -- a food-frequency-questionnaire category, not a purchasable food
+);
+
 
 -- ============================================================================
 --  1. Staging layer — the files exactly as downloaded
@@ -163,6 +172,12 @@ CREATE TABLE food_curation (
 
     menu_eligible boolean NOT NULL DEFAULT false,
 
+    -- Why an exclusion carries a reason: without it, "not fit for a menu" and
+    -- "nobody has looked at this yet" are the same state — the absence of a
+    -- row. Same separation as allergens = '{}' versus allergens_reviewed_at
+    -- IS NULL, and as kcal = NULL versus kcal = 0.
+    excluded_reason exclusion_reason,
+
     curated_by text,
     curated_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -183,6 +198,12 @@ CREATE TABLE food_curation (
     ),
     CONSTRAINT whole_only_requires_a_unit CHECK (
         NOT whole_only OR NOT by_weight
+    ),
+    -- One-directional on purpose. The converse — not eligible therefore must
+    -- have a reason — would break ordinary curation, where a row exists with
+    -- partial tagging and is simply not eligible yet.
+    CONSTRAINT excluded_reason_requires_ineligible CHECK (
+        excluded_reason IS NULL OR NOT menu_eligible
     )
 );
 

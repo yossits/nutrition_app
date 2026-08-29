@@ -170,7 +170,12 @@ CREATE TABLE food_curation (
     price                 smallint CHECK (price BETWEEN 1 AND 3),
 
     -- Serving policy --------------------------------------------------------
-    by_weight  boolean NOT NULL DEFAULT true,   -- measured in grams
+    -- No DEFAULT and no NOT NULL, deliberately: NULL means "nobody has ruled on
+    -- this yet". portions._options() tests by_weight BEFORE unit, so a DEFAULT
+    -- true would turn a chosen serving unit into dead data and phrase the menu
+    -- in grams with nothing to notice. eligible_requires_menu_fields below is
+    -- what turns that silence into a refused write. See db/10_menu_fields_check.sql.
+    by_weight  boolean,                         -- true = measured in grams
     whole_only boolean NOT NULL DEFAULT false,  -- no such thing as half an egg
     max_g      numeric CHECK (max_g > 0),       -- ceiling against 400 g of avocado
 
@@ -202,6 +207,19 @@ CREATE TABLE food_curation (
     ),
     CONSTRAINT whole_only_requires_a_unit CHECK (
         NOT whole_only OR NOT by_weight
+    ),
+    -- Separate from the safety gate above, and not folded into it: that gate is
+    -- kashrut and allergens, and a safety constraint that also enforces a price
+    -- field is one whose name lies about what its failure means. These three are
+    -- the fields the spike reads — filters.eligible() on prep and price,
+    -- portions._options() on by_weight. Added 30.08.2026; see docs/decisions.md
+    -- and db/10_menu_fields_check.sql, which applies it to a live database.
+    CONSTRAINT eligible_requires_menu_fields CHECK (
+        menu_eligible = false OR (
+            prep      IS NOT NULL
+        AND price     IS NOT NULL
+        AND by_weight IS NOT NULL
+        )
     ),
     -- One-directional on purpose. The converse — not eligible therefore must
     -- have a reason — would break ordinary curation, where a row exists with

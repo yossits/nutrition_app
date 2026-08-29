@@ -32,7 +32,11 @@ CREATE TYPE source_kind   AS ENUM ('ingredient', 'recipe', 'industry');
 -- costs a migration, which is the point — it forces the reason through
 -- docs/decisions.md before it reaches the data.
 CREATE TYPE exclusion_reason AS ENUM (
-    'ffq'       -- a food-frequency-questionnaire category, not a purchasable food
+    'ffq',                  -- a food-frequency-questionnaire category, not a purchasable food
+    'non_protein_nitrogen'  -- Kjeldahl reads any nitrogen as protein; MSG and
+                            -- instant tea powder declare protein they do not have,
+                            -- and win every leanness ranking on a figure that is
+                            -- an artefact
 );
 
 

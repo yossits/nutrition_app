@@ -360,6 +360,47 @@ def sort_key(row, category):
     )
 
 
+def select_candidates(pool):
+    """Pool rows -> (selected, pool_sizes, n_excluded).
+
+    selected    {"fat": [(family_label, row), ...], "protein": [...]}
+    pool_sizes  how many rows reached each family, counted BEFORE its floor
+    n_excluded  the non-kosher drop count
+
+    Lifted out of main() unchanged so db/11_curation_sheet.py can reuse the
+    selection instead of restating it. Two statements of which rows are the
+    candidates would not raise when they diverged — they would quietly hand
+    the curation sheet a different list from the one this report shows, which
+    is the failure mode the whole read-only discipline here exists to avoid.
+    """
+    by_family = {}
+    pool_sizes = {}
+    n_excluded = 0
+
+    for row in pool:
+        if is_excluded(row):
+            n_excluded += 1
+            continue
+        hit = family_of(row)
+        if hit is None:
+            continue
+        label, _category = hit
+        pool_sizes[label] = pool_sizes.get(label, 0) + 1
+        if not passes_floor(row, label):
+            continue
+        by_family.setdefault(label, []).append(row)
+
+    selected = {"fat": [], "protein": []}
+    for label, category, quota, _m, _f in FAMILIES:
+        if quota == 0:
+            continue
+        rows = sorted(by_family.get(label, []), key=lambda r: sort_key(r, category))
+        for row in rows[:quota]:
+            selected[category].append((label, row))
+
+    return selected, pool_sizes, n_excluded
+
+
 def is_dry_form(row, family):
     """Does this look like a form nobody eats as it stands? See DRY_NAME above.
 
@@ -534,30 +575,7 @@ def main():
             foods_total = cur.fetchone()["n"]
 
         # ---- family assignment, thresholds, quotas ---------------------
-        by_family = {}
-        pool_sizes = {}
-        n_excluded = 0
-
-        for row in pool:
-            if is_excluded(row):
-                n_excluded += 1
-                continue
-            hit = family_of(row)
-            if hit is None:
-                continue
-            label, _category = hit
-            pool_sizes[label] = pool_sizes.get(label, 0) + 1
-            if not passes_floor(row, label):
-                continue
-            by_family.setdefault(label, []).append(row)
-
-        selected = {"fat": [], "protein": []}
-        for label, category, quota, _m, _f in FAMILIES:
-            if quota == 0:
-                continue
-            rows = sorted(by_family.get(label, []), key=lambda r: sort_key(r, category))
-            for row in rows[:quota]:
-                selected[category].append((label, row))
+        selected, pool_sizes, n_excluded = select_candidates(pool)
 
         # ---- report ----------------------------------------------------
         out.write("CURATION CANDIDATES — fat and protein, ranked for human review\n")

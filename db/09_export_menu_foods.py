@@ -318,6 +318,16 @@ def build_records(foods, servings_by_code):
         rows = servings_by_code.get(source_code, [])
         unit_row = choose_unit(rows, float(kcal), source_code)
 
+        # A by_weight row carries no unit at all. choose_unit() is a pure
+        # function of the serving rows and never sees the flag, so without this
+        # the record leaves here with by_weight true AND a unit beside it —
+        # measured on lettuce 3807, which came out by_weight with עלה = 20 g.
+        # Nulling it here rather than trusting every consumer to test by_weight
+        # first: the generated menu_foods.py is what the model reads, and a
+        # model cannot be made to check one field before another.
+        if by_weight:
+            unit_row = None
+
         # Only the servings that may be menu units reach the prompt; a bottle
         # printed next to a tin invites the model to reason about the bottle.
         menu_rows = [r for r in rows if MENU_UNIT.get(r[0], (None, None))[0] is not None]

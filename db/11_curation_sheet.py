@@ -490,7 +490,7 @@ def write_provenance(out):
               "            This is the distinction the allergen pass will stand "
               "on\n\n")
     out.write("  LEFT BLANK, WITH A REASON\n"
-              "    q       quality. NOT proposed on any of the 119. §5.2 makes it "
+              "    q       quality. NOT proposed on any of the 119. §3 and §5.3 make it "
               "manual, and 07 refuses to let\n"
               "            `complete` stand in for it — nothing in the data ranks "
               "biological value. Note the\n"
@@ -650,7 +650,7 @@ def write_counts(out, items, curation_before, curation_after, null_reason,
     for column, key, note in (
         ("category", "category", "the family category; every row has one"),
         ("kosher",   "kosher",   "blank where class_code cannot answer"),
-        ("quality",  "_quality", "never proposed — §5.2 manual, no data source"),
+        ("quality",  "_quality", "never proposed — §3/§5.3 manual, no data source"),
     ):
         if key == "_quality":
             filled = 0

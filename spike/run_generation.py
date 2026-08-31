@@ -18,6 +18,13 @@ behaves exactly as it did before they existed:
                      phrased by portions.describe() - the function show_menus.py
                      already renders with. No second API call: vf() writes the
                      solved grams back into the menu that passed validation.
+                     A REJECTED menu prints too, marked as such: generate()
+                     returns None on failure, so the last attempt is read back
+                     out of the trace vf keeps.
+    --trace          per attempt: the solver's own kcal_err and protein_err,
+                     and every validator error IN FULL. The status line above
+                     shows one error truncated to 44 characters; three attempts
+                     that each failed differently look identical there.
 
 The number that matters is FIRST-ATTEMPT PASS RATE:
   >= 85%   thesis holds - build with confidence
@@ -39,6 +46,8 @@ _ap.add_argument("--profile", type=int, default=None, metavar="ID",
                  help="run the single profile with this id instead of the first N")
 _ap.add_argument("--show-menu", action="store_true",
                  help="print the Hebrew menu text and the grams the solver set")
+_ap.add_argument("--trace", action="store_true",
+                 help="per attempt: solver kcal_err/protein_err and all validator errors")
 food_source.add_argument(_ap)
 _args = _ap.parse_args()
 SOURCE = food_source.activate(_args.source)
@@ -102,7 +111,15 @@ for i, (p, t, pool) in enumerate(runnable[:n], 1):
 
     by = {f["name"]: f for f in pool}
 
-    def vf(menu, _p=p, _t=t, _pool=pool, _by=by):
+    # Every attempt's menu, solver info and verdict, captured as vf sees them.
+    # generate() returns None on failure and the menu would otherwise be lost -
+    # but vf is handed each attempt's object and already mutates it in place.
+    # This is the capture show_menus.py does with its `store` dict, one entry
+    # per attempt instead of one. Reporting only: nothing below changes what is
+    # composed, solved or validated, and no threshold moves.
+    trace = []
+
+    def vf(menu, _p=p, _t=t, _pool=pool, _by=by, _tr=trace):
         """Model picks foods -> solver sets portions -> validator checks."""
         picks = []
         for meal in menu:
@@ -110,18 +127,23 @@ for i, (p, t, pool) in enumerate(runnable[:n], 1):
             for it in meal.get("items", []):
                 f = resolve(it.get("food"), _pool)
                 if f is None:
-                    return False, [f"UNKNOWN_FOOD: {it.get('food')}"]
+                    _e = [f"UNKNOWN_FOOD: {it.get('food')}"]
+                    _tr.append({"menu": menu, "info": None, "errs": _e})
+                    return False, _e
                 it["food"] = f["name"]          # normalise back to the canonical name
                 items.append((f, float(it.get("grams", 100))))
             if items:
                 picks.append(items)
         if not picks:
+            _tr.append({"menu": menu, "info": None, "errs": ["EMPTY_MENU"]})
             return False, ["EMPTY_MENU"]
         mt = split_meals(_t, len(picks))
         solved, _ok, _info = solve(picks, mt, _t)
         for meal, sm in zip(menu, solved):
             meal["items"] = [{"food": f["name"], "grams": g} for f, g in sm]
-        return validate(menu, _p, _t, _pool)
+        _verdict, _errs = validate(menu, _p, _t, _pool)
+        _tr.append({"menu": menu, "info": _info, "errs": _errs})
+        return _verdict, _errs
 
     menu, att, usage, errs = generate(p, t, parts, names, sub, KEY, vf)
     tokens["in"] += usage["input_tokens"]
@@ -141,14 +163,32 @@ for i, (p, t, pool) in enumerate(runnable[:n], 1):
           f"{len(sub):>2}items   {status}")
 
     # vf() wrote the solver's grams back into `menu`, so the object that passed
-    # validation is the object printed here. One API call, not two.
-    if _args.show_menu and menu:
-        for meal in menu:
+    # validation is the object printed here. One API call, not two. On failure
+    # generate() hands back None, so the last attempt comes out of the trace:
+    # a menu that was rejected is the one worth reading, and it used to print
+    # nothing at all.
+    shown = menu if menu else (trace[-1]["menu"] if trace else None)
+    if _args.show_menu and shown:
+        if menu is None:
+            print("        [REJECTED - last attempt, failed validation]")
+        for meal in shown:
             print(f"        {meal.get('name', '')}")
             for it in meal.get("items", []):
                 _f = by[it["food"]]
                 print(f"          {_f['he']}  |  {describe(_f, it['grams'])}"
                       f"  |  {it['grams']:.1f} g")
+
+    if _args.trace:
+        print(f"        attempts that reached the validator: {len(trace)}")
+        for _k, _tr in enumerate(trace, 1):
+            _inf = _tr["info"]
+            if _inf is None:
+                print(f"        attempt {_k}: solver did not run")
+            else:
+                print(f"        attempt {_k}: kcal_err={_inf['kcal_err']}  "
+                      f"protein_err={_inf['protein_err']}  totals={_inf['totals']}")
+            for _e in (_tr["errs"] or ["(accepted - no errors)"]):
+                print(f"           {_e}")
 
 el = time.time() - t0
 print(f"""

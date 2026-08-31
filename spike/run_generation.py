@@ -6,30 +6,76 @@ The real test of the product thesis.
     Windows:    set ANTHROPIC_API_KEY=sk-ant-...
                 python run_generation.py 30
 
+Three optional flags, all off by default. With none of them passed, this file
+behaves exactly as it did before they existed:
+
+    --source db      run against spike/menu_foods.py instead of the 63-item
+                     seed - the same switch run_spike.py carries, through the
+                     same food_source contract.
+    --profile <id>   run the single profile with this id, instead of the first
+                     N that survive the runnable gates.
+    --show-menu      print the Hebrew menu text and the grams the solver set,
+                     phrased by portions.describe() - the function show_menus.py
+                     already renders with. No second API call: vf() writes the
+                     solved grams back into the menu that passed validation.
+
 The number that matters is FIRST-ATTEMPT PASS RATE:
   >= 85%   thesis holds - build with confidence
   60-85%   workable - tighten the prompt and tolerances
   <  60%   rethink the generation approach before building any UI
 """
+import argparse
 import os, sys, time, collections
-from engine import targets, split_meals, SafetyBlock
-from filters import eligible, validate, pool_health, sample_for_prompt, resolve
-from portions import solve, feasible
-from generator import generate
-from profiles import PROFILES
+
+import food_source
+
+# The source is selected BEFORE the other modules are imported: filters.py binds
+# foods.FOODS at import time, so the swap has to happen first. Same ordering as
+# run_spike.py, and for the same reason. See food_source.py.
+_ap = argparse.ArgumentParser(description="Generation run over N runnable profiles.")
+_ap.add_argument("n", nargs="?", type=int, default=30,
+                 help="how many runnable profiles to generate (default: 30)")
+_ap.add_argument("--profile", type=int, default=None, metavar="ID",
+                 help="run the single profile with this id instead of the first N")
+_ap.add_argument("--show-menu", action="store_true",
+                 help="print the Hebrew menu text and the grams the solver set")
+food_source.add_argument(_ap)
+_args = _ap.parse_args()
+SOURCE = food_source.activate(_args.source)
+
+from engine import targets, split_meals, SafetyBlock                             # noqa: E402
+from filters import eligible, validate, pool_health, sample_for_prompt, resolve  # noqa: E402
+from portions import solve, feasible, describe                                   # noqa: E402
+from generator import generate                                                   # noqa: E402
+from profiles import PROFILES                                                    # noqa: E402
+
+# Announced only when the flag moved it. A run with no flags must print exactly
+# what it printed before the flag existed - that is the whole point of it being
+# a flag. run_spike.py prints this unconditionally because there the line has
+# always been there.
+if _args.source != food_source.SEED:
+    print(f"Food source: {SOURCE}")
 
 KEY = os.environ.get("ANTHROPIC_API_KEY")
 if not KEY:
     sys.exit("Missing ANTHROPIC_API_KEY environment variable.")
 
-N = int(sys.argv[1]) if len(sys.argv) > 1 else 30
+N = _args.n
 MEAL_NAMES = {3: ["ארוחת בוקר", "ארוחת צהריים", "ארוחת ערב"],
               4: ["ארוחת בוקר", "ארוחת צהריים", "ארוחת ביניים", "ארוחת ערב"],
               5: ["ארוחת בוקר", "ארוחת ביניים", "ארוחת צהריים",
                   "ארוחת ביניים אחה\"צ", "ארוחת ערב"]}
 
+# --profile isolates one id. Without the flag, candidates IS PROFILES and the
+# loop below is unchanged.
+candidates = PROFILES
+if _args.profile is not None:
+    candidates = [x for x in PROFILES if x["id"] == _args.profile]
+    if not candidates:
+        sys.exit(f"No profile with id {_args.profile} in this profile set.")
+
 runnable = []
-for p in PROFILES:
+for p in candidates:
     try:
         t = targets(p)
     except SafetyBlock:
@@ -93,6 +139,16 @@ for i, (p, t, pool) in enumerate(runnable[:n], 1):
     status = f"OK on attempt {att}" if menu else f"FAIL - {errs[0][:44] if errs else ''}"
     print(f"  {i:>3}/{n}  #{p['id']:<4} {t['kcal']:>4}kcal {p['meals']}meals "
           f"{len(sub):>2}items   {status}")
+
+    # vf() wrote the solver's grams back into `menu`, so the object that passed
+    # validation is the object printed here. One API call, not two.
+    if _args.show_menu and menu:
+        for meal in menu:
+            print(f"        {meal.get('name', '')}")
+            for it in meal.get("items", []):
+                _f = by[it["food"]]
+                print(f"          {_f['he']}  |  {describe(_f, it['grams'])}"
+                      f"  |  {it['grams']:.1f} g")
 
 el = time.time() - t0
 print(f"""

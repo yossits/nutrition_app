@@ -144,19 +144,33 @@ DRY_NAME_VETO = re.compile(r"(קליה|קלייה|צליה|צלייה|אפיה|�
 # list 3vav2a measured, and on 14 of the list this file now produces — the
 # recipe key of 02.09.2026 is what moved it, since a dish is a cooked form.
 #
-# Two markers, and the second is deliberately narrower than the first. "לא
-# מבושל" says it outright and means the same thing in any family. "טרי" means
-# uncooked only in the meat, poultry and fish families — on a cheese or a juice
-# it is a marketing word about age, not about form. It is matched as a WHOLE
-# word, so a name that merely carries the letters — "טרייה" as an adjective,
-# "גיטרי" — does not fire it. \w is Unicode here, and Hebrew letters are word
-# characters, which is exactly what the two lookarounds need.
+# Three markers, and the two after the first are narrower on purpose.
 #
-# No moisture clause, unlike dry?: "לא מבושל" is a statement about preparation
-# and needs no second signal to be read correctly.
-RAW_NAME = re.compile(r"לא מבושל")
+#   "לא מבושל"  says it outright and means the same thing in any family. It
+#     carries a LEFT guard because מלא ends in לא: without one, "אורז מלא
+#     מבושל" — cooked brown rice — would read as uncooked. No right guard, so
+#     the inflections "לא מבושלים" and "לא מבושלת" still fire, as they should.
+#   "טרי"  means uncooked only in the animal families; on a cheese or a juice it
+#     is a marketing word about age, not about form. Matched as a WHOLE word,
+#     so a name that merely carries the letters — "טרייה" as an adjective,
+#     "גיטרי" — does not fire it.
+#   "קפוא"  the same three families, and vetoed by "מבושל" anywhere in the name:
+#     a frozen fillet is an uncooked form, a frozen cooked dish is not, and the
+#     source says which. No word guard — "קפואה" and "קפואים" are the same word.
+#     Measured 02.09.2026 over the pool of 4,491: 103 names carry "קפוא", 33 of
+#     them also "מבושל". Two of the 119 were frozen and unflagged before this
+#     marker existed, 1213 and 1273, both frozen fish fillets.
+#
+# \w is Unicode here, and Hebrew letters are word characters, which is exactly
+# what the guards need.
+#
+# No moisture clause, unlike dry?: these are statements about preparation and
+# need no second signal to be read correctly.
+RAW_NAME = re.compile(r"(?<!\w)לא מבושל")
 RAW_FRESH = re.compile(r"(?<!\w)טרי(?!\w)")
-RAW_FRESH_FAMILIES = {"poultry", "fish & seafood", "beef, veal & lamb"}
+RAW_FROZEN = re.compile(r"קפוא")
+RAW_FROZEN_VETO = re.compile(r"מבושל")
+RAW_ANIMAL_FAMILIES = {"poultry", "fish & seafood", "beef, veal & lamb"}
 
 # Animal food groups, by class_code prefix. Used for one thing only: the
 # vegetable-fibre flag. The 29.08.2026 decision requires a PLANT item with a
@@ -521,6 +535,10 @@ def is_dry_form(row, family):
 def is_raw_form(row, family):
     """Does the name say this is the uncooked form? See RAW_NAME above.
 
+    Three markers: "לא מבושל" in any family but the powders, and — in the animal
+    families only — "טרי" as a whole word, or "קפוא" with no "מבושל" beside it,
+    because a frozen fillet is an uncooked form and a frozen cooked dish is not.
+
     dry?'s sibling, and it does what dry? does: it marks, it never excludes and
     it never moves a row. Protein powders are exempt from the first marker for
     the reason they are exempt from dry? — a powder is eaten as powder.
@@ -528,7 +546,11 @@ def is_raw_form(row, family):
     name = " ".join(str(row["name_he"]).split())
     if family != "protein powders" and RAW_NAME.search(name):
         return True
-    return family in RAW_FRESH_FAMILIES and bool(RAW_FRESH.search(name))
+    if family not in RAW_ANIMAL_FAMILIES:
+        return False
+    if RAW_FRESH.search(name):
+        return True
+    return bool(RAW_FROZEN.search(name)) and not RAW_FROZEN_VETO.search(name)
 
 
 def flags_of(row, family):
@@ -572,11 +594,12 @@ def write_table(out, category, title, note, selected, quotas):
     n_fib = sum(1 for r in rows if r["fiber_g"] is None and r["p2"] not in ANIMAL_P2)
     n_wgt = sum(1 for r in rows if r["servings"] == 0)
     n_dry = sum(1 for fam, r in selected if is_dry_form(r, fam))
+    n_raw = sum(1 for fam, r in selected if is_raw_form(r, fam))
 
     out.write(f"\n\n{'=' * 118}\n")
     out.write(f"▸ {title} — {len(rows)} candidates · "
               f"{n_out} kcal outliers · {n_fib} unknown fibre · {n_wgt} by_weight · "
-              f"{n_dry} dry\n")
+              f"{n_dry} dry · {n_raw} raw\n")
     out.write(f"  {note}\n")
     out.write(f"{'=' * 118}\n")
 
@@ -722,10 +745,12 @@ def main():
                   "is §5.0.2's own exception, held by §5.4.\n"
                   "  raw?        the name says the uncooked form (#28): \"לא מבושל\" "
                   "in any family but the\n"
-                  "              powders, or \"טרי\" as a whole word in poultry, fish, "
-                  "and beef, veal & lamb,\n"
-                  "              where it means uncooked rather than recently made. "
-                  "Marks, like dry?; it moves nothing.\n")
+                  "              powders; or, in poultry, fish, and beef, veal & lamb, "
+                  "\"טרי\" as a whole word,\n"
+                  "              or \"קפוא\" with no \"מבושל\" beside it — a frozen "
+                  "fillet is an uncooked form,\n"
+                  "              a frozen cooked dish is not. Marks, like dry?; it "
+                  "moves nothing.\n")
 
         write_table(
             out, "fat", "FAT",

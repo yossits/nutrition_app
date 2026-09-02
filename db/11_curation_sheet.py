@@ -692,10 +692,10 @@ def write_counts(out, items, curation_before, curation_after, null_reason,
                   "on this sheet inherits\n"
                   "    allergens from components — the allergen pass reviews "
                   "each row on its own.\n"
-                  "    The mechanism is SOURCE_RANK in 07: ingredient before "
-                  "industry before recipe,\n"
-                  "    so recipes sink to the bottom of every family and no "
-                  "quota reaches them.\n")
+                  "    This is an observation, not a mechanism: SOURCE_RANK in "
+                  "07 is a tie-break\n"
+                  "    below the nutrition key, so a recipe reaches a quota when "
+                  "its macros earn it.\n")
 
 
 def main():

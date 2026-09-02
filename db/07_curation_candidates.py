@@ -52,11 +52,17 @@ and not written to docs/. Block 3 writes curation rows, after block 4.
 
 THE RANKING — quotas per source family, ranked within the family
 
+Within a family the food ranks before the record. Atwater outliers sink; then
+the nutrition — fat_g for fat, the protein energy share for protein; then, as
+tie-breaks only, the source kind (ingredient before industry before recipe)
+and whether a human serving unit exists; then source_code. Source kind and
+serving unit describe the database row, not the food, and ranking on them
+first closed most of every family to the quota (measurements.md, 30.08.2026).
+
 quality is the primary sort key under §5.3, and it is a curation field decided
-in block 5. It does not exist yet and NOTHING here substitutes for it. What is
-available is `complete`, derived from the nine essential amino acids in
-04_transform.py and defined as the secondary sort in §5.1 — it is used as the
-secondary key and named as such in the report header.
+in block 5. It does not exist yet and NOTHING here substitutes for it.
+`complete`, derived from the nine essential amino acids in 04_transform.py, is
+printed as the cmpl column and is not in the key (decisions.md, 30.08.2026).
 
 Quotas rather than one global score, because a global score over 209 fat items
 returns a list that is all oils and nuts — which widens the bottleneck the list
@@ -344,18 +350,19 @@ def describe_floors(label):
 
 
 def sort_key(row, category):
-    """Rank within a family. See the module docstring on why quality is absent."""
-    base = (
-        SOURCE_RANK.get(row["source"], 3),      # ingredient before industry before recipe
-        0 if row["servings"] > 0 else 1,        # a human serving unit first
-        1 if row["is_outlier"] else 0,          # Atwater outliers sink, they do not drop
-    )
+    """Rank within a family: the food first, the record second.
+
+    See the module docstring on why quality is absent.
+    """
     if category == "fat":
-        density = -float(row["fat_g"])
-        return base + (density, int(row["source_code"]))
-    return base + (
-        0 if row["complete"] else 1,            # §5.1 — the available secondary key
-        -(float(row["protein_g"]) * 4) / float(row["kcal"]),
+        nutrition = -float(row["fat_g"])
+    else:
+        nutrition = -(float(row["protein_g"]) * 4) / float(row["kcal"])
+    return (
+        1 if row["is_outlier"] else 0,          # Atwater outliers sink, they do not drop
+        nutrition,                              # fat_g, or the protein energy share
+        SOURCE_RANK.get(row["source"], 3),      # tie-break: ingredient before industry before recipe
+        0 if row["servings"] > 0 else 1,        # tie-break: a human serving unit first
         int(row["source_code"]),
     )
 
@@ -607,16 +614,16 @@ def main():
 
         write_table(
             out, "fat", "FAT",
-            "Ranked by source kind, then serving unit, then Atwater outlier, "
-            "then fat_g. Entry floor per family in brackets.",
+            "Ranked by fat_g, Atwater outliers last; source kind, then serving "
+            "unit, break ties. Entry floor per family in brackets.",
             selected["fat"], pool_sizes)
 
         write_table(
             out, "protein", "PROTEIN",
-            "Ranked by source kind, then serving unit, then Atwater outlier, then "
-            "`complete`, then protein energy share.\n  quality is a block-5 "
-            "curation field and is NOT available. `complete` is the secondary key "
-            "under §5.1; nothing stands in for quality.",
+            "Ranked by protein energy share, Atwater outliers last; source kind, "
+            "then serving unit, break ties.\n  quality is a block-5 curation "
+            "field and is NOT available. `complete` is shown as cmpl and is not "
+            "in the key; nothing stands in for quality.",
             selected["protein"], pool_sizes)
 
         write_coverage(out, selected["fat"])

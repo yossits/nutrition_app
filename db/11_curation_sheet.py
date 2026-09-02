@@ -254,9 +254,9 @@ def quote_source(relpath, first_marker, last_marker):
 #  Row rendering.
 #
 #  One line per item, as asked. The cost is width, and the two things that keep
-#  it near 190 rather than past 240 are the five-character flag mask and the
-#  family number standing in for the family name, which is already the group
-#  heading directly above.
+#  it near 190 rather than past 240 are the flag mask — one character per flag,
+#  len(FLAG_LETTERS) of them — and the family number standing in for the family
+#  name, which is already the group heading directly above.
 NAME_W = 40
 BLANK = "·"          # the code has no source for this cell
 FILL = "_"           # Yossi fills this one in 3d2
@@ -276,20 +276,27 @@ def num(value, width, decimals=1):
     return f"{float(value):.{decimals}f}".rjust(width)
 
 
+# The flag columns, in column order. R sits beside D because raw? is dry?'s
+# sibling — open-questions.md #28 — and the two are read together. flag_mask()
+# renders positionally, so this string, HEAD_1 and the counts loop all read it
+# rather than repeating it.
+FLAG_LETTERS = "DRKFVC"
+
+
 def flag_mask(flags):
-    """Five flags in five columns. A dot is 'not set', a letter is 'set'.
+    """Six flags in six columns. A dot is 'not set', a letter is 'set'.
 
     Spelled-out flag names cost about 30 characters a row and are read exactly
     once; the mask is read down the column, which is how a reader actually uses
     it — 'show me every dry row in this family'.
     """
-    return "".join(letter if letter in flags else "·" for letter in "DKFVC")
+    return "".join(letter if letter in flags else "·" for letter in FLAG_LETTERS)
 
 
 HEAD_1 = ("fam  code  " + "name_he".ljust(NAME_W) + "  class_cd"
           " |  kcal  prot   fat  carb  fibr  mois"
           " | cat      ksh    q  sup  bw  unit          gram  wh  vgn"
-          " | cmp | DKFVC"
+          " | cmp | " + FLAG_LETTERS +
           " | max_g  prep  prc  kok  allergens")
 
 
@@ -382,6 +389,8 @@ def build_items(selected, servings_by_code, components_by_code):
             mask = set()
             if "dry?" in flags:
                 mask.add("D")
+            if "raw?" in flags:
+                mask.add("R")
             if row["is_outlier"]:
                 mask.add("K")
             if "fiber?" in flags:
@@ -509,6 +518,11 @@ def write_provenance(out):
               "the sheet.\n"
               "    D  dry?           §5.0.2 — moisture under "
               f"{CAND.DRY_MOISTURE_MAX} g AND a name that says so\n"
+              "    R  raw?           #28 — the name says the uncooked form: "
+              "\"לא מבושל\" anywhere but the\n"
+              "                      powders, or \"טרי\" as a whole word in "
+              "poultry, fish, and beef,\n"
+              "                      veal & lamb\n"
               "    K  kcal_outlier?  the derived kcal and the file's disagree "
               "beyond the Atwater gate\n"
               "    F  fiber?         a plant item with no fibre value; verify "
@@ -602,9 +616,9 @@ def write_counts(out, items, curation_before, curation_after, null_reason,
               f"   of {fat_quota + pro_quota}\n")
 
     out.write("\n  Flags — how many rows each one lights up\n")
-    names = {"D": "dry?", "K": "kcal_outlier?", "F": "fiber?",
+    names = {"D": "dry?", "R": "raw?", "K": "kcal_outlier?", "F": "fiber?",
              "V": "verify_queue?", "C": "container_21?"}
-    for letter in "DKFVC":
+    for letter in FLAG_LETTERS:
         n = sum(1 for it in every if letter in it["flags"])
         n_fat = sum(1 for it in items["fat"] if letter in it["flags"])
         n_pro = sum(1 for it in items["protein"] if letter in it["flags"])
@@ -692,10 +706,16 @@ def write_counts(out, items, curation_before, curation_after, null_reason,
                   "on this sheet inherits\n"
                   "    allergens from components — the allergen pass reviews "
                   "each row on its own.\n"
-                  "    This is an observation, not a mechanism: SOURCE_RANK in "
-                  "07 is a tie-break\n"
-                  "    below the nutrition key, so a recipe reaches a quota when "
-                  "its macros earn it.\n")
+                  "    The mechanism is the first key of sort_key() in 07: a "
+                  "recipe sinks below every\n"
+                  "    raw material in its family (02.09.2026), so a quota "
+                  "reaches one only where the\n"
+                  "    raw materials ran out — either the family holds fewer "
+                  "than its quota, or the p4\n"
+                  "    cap skipped enough of them. Neither happened here. The "
+                  "count above is\n"
+                  "    food_recipe_components, a different field from `source`, "
+                  "and it agrees.\n")
 
 
 def main():

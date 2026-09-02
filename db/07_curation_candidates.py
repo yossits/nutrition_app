@@ -52,12 +52,20 @@ and not written to docs/. Block 3 writes curation rows, after block 4.
 
 THE RANKING — quotas per source family, ranked within the family
 
-Within a family the food ranks before the record. Atwater outliers sink; then
-the nutrition — fat_g for fat, the protein energy share for protein; then, as
-tie-breaks only, the source kind (ingredient before industry before recipe)
-and whether a human serving unit exists; then source_code. Source kind and
-serving unit describe the database row, not the food, and ranking on them
-first closed most of every family to the quota (measurements.md, 30.08.2026).
+Within a family a raw material ranks before a dish, and the food before the
+record. A recipe sinks below every raw material; then Atwater outliers sink;
+then the nutrition — fat_g for fat, the protein energy share for protein;
+then, as tie-breaks only, the source kind (ingredient before industry — a
+recipe is already below by the first key) and whether a human serving unit
+exists; then source_code. Source kind and serving unit describe the database
+row, not the food, and ranking on them first closed most of every family to
+the quota (measurements.md, 30.08.2026).
+
+The recipe key is deliberate and it is new. A recipe is a prepared dish whose
+macros are the dish's rather than an ingredient's, and the narrow track wants
+the raw material. The old key sank recipes by side effect, under source kind;
+when that dropped to a tie-break the side effect went with it and 9 recipes
+entered the 119, from 0 before (decisions.md, 02.09.2026).
 
 quality is the primary sort key under §5.3, and it is a curation field decided
 in block 5. It does not exist yet and NOTHING here substitutes for it.
@@ -67,6 +75,17 @@ printed as the cmpl column and is not in the key (decisions.md, 30.08.2026).
 Quotas rather than one global score, because a global score over 209 fat items
 returns a list that is all oils and nuts — which widens the bottleneck the list
 exists to open.
+
+
+THE p4 CAP — how the quota is spent inside the family
+
+Quotas keep one family from eating the list; the cap keeps one sub-family from
+eating a family. A quota of P4_CAP_MIN_QUOTA or more is filled in two passes:
+the capped pass takes at most P4_CAP rows per class_code p4 in rank order, and
+the refill pass then takes what that one skipped, again in rank order, until
+the quota is full. Nothing is dropped and nothing is added — the eligible rows
+are the same rows; only which of them the quota reaches changes. See P4_CAP
+for the measurement, and take_with_cap() for the two passes.
 """
 
 import io
@@ -118,6 +137,26 @@ HERE = Path(__file__).parent
 DRY_MOISTURE_MAX = 20                                    # g water per 100 g
 DRY_NAME = re.compile(r"יבש|מיובש|אבק|(?<!מ)קמח")
 DRY_NAME_VETO = re.compile(r"(קליה|קלייה|צליה|צלייה|אפיה|אפייה|בישול)\s+יבש")
+
+# The raw-form flag — open-questions.md #28. §5.0.2 covers a dry form against a
+# prepared one; raw against cooked is the same distinction in another word, and
+# it had no flag. Counted against the names of the 119: "לא מבושל" on 10 of the
+# list 3vav2a measured, and on 14 of the list this file now produces — the
+# recipe key of 02.09.2026 is what moved it, since a dish is a cooked form.
+#
+# Two markers, and the second is deliberately narrower than the first. "לא
+# מבושל" says it outright and means the same thing in any family. "טרי" means
+# uncooked only in the meat, poultry and fish families — on a cheese or a juice
+# it is a marketing word about age, not about form. It is matched as a WHOLE
+# word, so a name that merely carries the letters — "טרייה" as an adjective,
+# "גיטרי" — does not fire it. \w is Unicode here, and Hebrew letters are word
+# characters, which is exactly what the two lookarounds need.
+#
+# No moisture clause, unlike dry?: "לא מבושל" is a statement about preparation
+# and needs no second signal to be read correctly.
+RAW_NAME = re.compile(r"לא מבושל")
+RAW_FRESH = re.compile(r"(?<!\w)טרי(?!\w)")
+RAW_FRESH_FAMILIES = {"poultry", "fish & seafood", "beef, veal & lamb"}
 
 # Animal food groups, by class_code prefix. Used for one thing only: the
 # vegetable-fibre flag. The 29.08.2026 decision requires a PLANT item with a
@@ -226,6 +265,22 @@ FAMILIES = [
     ("organ meat",            "protein",  0, lambda r: r["p2"] == "25",                   {}),
     ("cooked dishes & soups", "protein",  0, lambda r: r["p2"] in ("27", "28"),           {}),
 ]
+
+# The p4 cap — how a family's quota is spent inside the family. Measured in
+# 3vav2a, and two numbers decided it: poultry's p4 2420 held 11 of the 12 slots,
+# turkey breast in eleven preparations, and dairy's 1410 held 5 of 10. A quota
+# spent inside one sub-family buys no depth, and depth is the whole criterion.
+#
+# Both guards matter, and the second is not defensive dressing. Seven of the
+# eleven fat families hold their ENTIRE passing pool in one p4 — the three oil
+# families on 8210, olives on 7551, tahini and other seeds on 4310, avocado on
+# 6310. The quota floor exempts all but one of them; for that one, olives at
+# quota 10 on p4 7551, the capped pass takes four and the refill pass has to
+# hand back the other six, in rank order, so that the family ends up with the
+# same ten rows it had before the cap existed. A hard cap would leave it with
+# four, and olives is therefore the test that the refill works.
+P4_CAP = 4                # rows per p4 in the capped pass
+P4_CAP_MIN_QUOTA = 10     # below this a quota is too small to spread
 
 # Kosher exclusions. Not nutrition, and not negotiable for this market: an item
 # here cannot become menu_eligible whatever its macros look like, so it has no
@@ -350,7 +405,7 @@ def describe_floors(label):
 
 
 def sort_key(row, category):
-    """Rank within a family: the food first, the record second.
+    """Rank within a family: raw material first, then the food, then the record.
 
     See the module docstring on why quality is absent.
     """
@@ -359,12 +414,51 @@ def sort_key(row, category):
     else:
         nutrition = -(float(row["protein_g"]) * 4) / float(row["kcal"])
     return (
+        1 if row["source"] == "recipe" else 0,  # a dish sinks below every raw material
         1 if row["is_outlier"] else 0,          # Atwater outliers sink, they do not drop
         nutrition,                              # fat_g, or the protein energy share
-        SOURCE_RANK.get(row["source"], 3),      # tie-break: ingredient before industry before recipe
+        SOURCE_RANK.get(row["source"], 3),      # tie-break: ingredient before industry; recipe is already below
         0 if row["servings"] > 0 else 1,        # tie-break: a human serving unit first
         int(row["source_code"]),
     )
+
+
+def take_with_cap(rows, quota):
+    """The first `quota` rows, at most P4_CAP per p4 on the capped pass.
+
+    `rows` arrive in rank order. The capped pass walks them and takes a row
+    while its p4 has fewer than P4_CAP taken. The refill pass runs only if the
+    first came up short, and walks the same order again taking what the first
+    skipped. The list returned is therefore the capped pass in rank order
+    followed by the refill in rank order: a refilled row prints below rows it
+    outranks, and that is on purpose — its position says it entered on the
+    refill rather than on the spread.
+
+    A family under P4_CAP_MIN_QUOTA is returned untouched. Either way the
+    result holds min(quota, len(rows)) rows: every row the capped pass reaches
+    is taken or skipped, and the refill draws from exactly what was skipped.
+    See P4_CAP for the measurement behind the two numbers.
+    """
+    if quota < P4_CAP_MIN_QUOTA:
+        return rows[:quota]
+
+    taken, skipped, per_p4 = [], [], {}
+    for row in rows:
+        if len(taken) >= quota:
+            break
+        p4 = row["p4"]
+        if per_p4.get(p4, 0) < P4_CAP:
+            per_p4[p4] = per_p4.get(p4, 0) + 1
+            taken.append(row)
+        else:
+            skipped.append(row)
+
+    for row in skipped:
+        if len(taken) >= quota:
+            break
+        taken.append(row)
+
+    return taken
 
 
 def select_candidates(pool):
@@ -402,7 +496,7 @@ def select_candidates(pool):
         if quota == 0:
             continue
         rows = sorted(by_family.get(label, []), key=lambda r: sort_key(r, category))
-        for row in rows[:quota]:
+        for row in take_with_cap(rows, quota):
             selected[category].append((label, row))
 
     return selected, pool_sizes, n_excluded
@@ -424,8 +518,21 @@ def is_dry_form(row, family):
     return bool(DRY_NAME.search(name)) and not DRY_NAME_VETO.search(name)
 
 
+def is_raw_form(row, family):
+    """Does the name say this is the uncooked form? See RAW_NAME above.
+
+    dry?'s sibling, and it does what dry? does: it marks, it never excludes and
+    it never moves a row. Protein powders are exempt from the first marker for
+    the reason they are exempt from dry? — a powder is eaten as powder.
+    """
+    name = " ".join(str(row["name_he"]).split())
+    if family != "protein powders" and RAW_NAME.search(name):
+        return True
+    return family in RAW_FRESH_FAMILIES and bool(RAW_FRESH.search(name))
+
+
 def flags_of(row, family):
-    """The four marks. Marks, not exclusions — every flagged item stays."""
+    """The five marks. Marks, not exclusions — every flagged item stays."""
     flags = []
     if row["is_outlier"]:
         flags.append("outlier")
@@ -435,6 +542,8 @@ def flags_of(row, family):
         flags.append("by_weight?")
     if is_dry_form(row, family):
         flags.append("dry?")
+    if is_raw_form(row, family):
+        flags.append("raw?")
     return flags
 
 
@@ -610,20 +719,32 @@ def main():
                   "              Both are required — oil and nuts are dry and edible, "
                   "and \"עדשים יבשים, מבושלים\" is cooked.\n"
                   "              Protein powders are exempt; a powder eaten as powder "
-                  "is §5.0.2's own exception, held by §5.4.\n")
+                  "is §5.0.2's own exception, held by §5.4.\n"
+                  "  raw?        the name says the uncooked form (#28): \"לא מבושל\" "
+                  "in any family but the\n"
+                  "              powders, or \"טרי\" as a whole word in poultry, fish, "
+                  "and beef, veal & lamb,\n"
+                  "              where it means uncooked rather than recently made. "
+                  "Marks, like dry?; it moves nothing.\n")
 
         write_table(
             out, "fat", "FAT",
-            "Ranked by fat_g, Atwater outliers last; source kind, then serving "
-            "unit, break ties. Entry floor per family in brackets.",
+            f"Recipes last, then Atwater outliers; ranked by fat_g; source kind, "
+            f"then serving unit, break ties.\n  A quota of {P4_CAP_MIN_QUOTA} or "
+            f"more is filled in two passes: at most {P4_CAP} rows per class_code "
+            f"p4, then a refill in rank order.\n  Entry floor per family in "
+            f"brackets.",
             selected["fat"], pool_sizes)
 
         write_table(
             out, "protein", "PROTEIN",
-            "Ranked by protein energy share, Atwater outliers last; source kind, "
-            "then serving unit, break ties.\n  quality is a block-5 curation "
-            "field and is NOT available. `complete` is shown as cmpl and is not "
-            "in the key; nothing stands in for quality.",
+            f"Recipes last, then Atwater outliers; ranked by protein energy "
+            f"share; source kind, then serving unit, break ties.\n  A quota of "
+            f"{P4_CAP_MIN_QUOTA} or more is filled in two passes: at most "
+            f"{P4_CAP} rows per class_code p4, then a refill in rank order.\n"
+            f"  quality is a block-5 curation field and is NOT available. "
+            f"`complete` is shown as cmpl and is not in the key; nothing stands "
+            f"in for quality.",
             selected["protein"], pool_sizes)
 
         write_coverage(out, selected["fat"])

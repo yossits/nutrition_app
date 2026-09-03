@@ -1,8 +1,8 @@
-# The spike deliberately has almost no dependencies - everything except the
-# API call is plain Python. Keep it that way for as long as possible.
+# Kept deliberately short. Everything in spike/ and db/ beyond these three
+# packages is plain Python; add a dependency only when it solves something.
 requests>=2.31.0
 openpyxl
 
-# 3.1 is where the psycopg3 API these scripts use settled; block 1 was run and
+# 3.1 is where the psycopg3 API the db/ scripts use settled; block 1 was run and
 # verified against 3.3.4 on 29.08.2026.
 psycopg[binary]>=3.1

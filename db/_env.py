@@ -25,7 +25,7 @@ Three things this handles that a two-line reader does not:
     print; the value itself is never logged.
 
 No dependency on python-dotenv: it does not solve the encoding trap above, and
-requirements.txt is deliberately near-empty.
+requirements.txt is kept short on purpose.
 """
 
 import os

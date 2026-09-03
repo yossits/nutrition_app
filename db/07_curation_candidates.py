@@ -125,7 +125,8 @@ HERE = Path(__file__).parent
 #     material and then the preparation, so "עדשים יבשים, מבושלים" is a COOKED
 #     lentil, and "קלייה יבשה" is a roasting method rather than a form.
 #
-# Together they are clean: 7 flagged, none of them wrong, none in fat. Moisture
+# Together they were clean when the rule was set (29.08.2026): 7 flagged, none
+# of them wrong, none in fat. The count moves with the pool. Moisture
 # vetoes the three cooked legumes for free. The roasting phrase is excluded by
 # name and the exclusion is bounded — it matches exactly 3 rows in the whole
 # database (1821, 8247, 8248). `(?<!מ)קמח` is flour and not the seven baked

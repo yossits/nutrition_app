@@ -20,7 +20,7 @@ second path, selected with --source db.
 
 What the export decides, and what it must not
 ---------------------------------------------
-Curation fields — by_weight, whole_only, max_g, prep, price, quality, category,
+Curation fields — by_weight, whole_only, max_g, prep, quality, category,
 kosher, allergens, tags, supp — are read from food_curation as they are. They
 are human judgements and deriving them here would be inventing tagging.
 
@@ -270,7 +270,7 @@ def choose_unit(rows, kcal_per_100g, source_code):
 
 SQL_FOODS = """
     SELECT source_code, name_he, category::text, kcal, protein_g, fat_g, carb_g,
-           kosher::text, allergens, tags, quality, supp, prep, price, complete,
+           kosher::text, allergens, tags, quality, supp, prep, complete,
            by_weight, whole_only, max_g
     FROM v_menu_foods
     ORDER BY source_code::int
@@ -295,7 +295,7 @@ def build_records(foods, servings_by_code):
     records, problems = [], []
     for i, row in enumerate(foods, 1):
         (source_code, name_he, category, kcal, protein, fat, carb, kosher,
-         allergens, tags, quality, supp, prep, price, complete,
+         allergens, tags, quality, supp, prep, complete,
          by_weight, whole_only, max_g) = row
 
         # Refusing, not filling in. An exported record with a hole in it fails
@@ -306,10 +306,10 @@ def build_records(foods, servings_by_code):
         #
         # Note that the schema permits both of these on a menu_eligible row.
         # eligible_requires_safety_tagging covers category, kosher and the
-        # allergen review; prep and price are not in it. That is a gap in the
+        # allergen review; prep is not in it. That is a gap in the
         # constraint, not in this file, and closing it is a schema decision.
         gaps = [field for field, value in
-                (("kcal", kcal), ("prep", prep), ("price", price))
+                (("kcal", kcal), ("prep", prep))
                 if value is None]
         if gaps:
             problems.append(f"{source_code} | {name_he} | NULL: {', '.join(gaps)}")
@@ -341,7 +341,7 @@ def build_records(foods, servings_by_code):
             servings=[(r[2], num(r[3])) for r in menu_rows],
             allergens=set(allergens or ()),
             tags=set(tags or ()),
-            prep=prep, price=price,
+            prep=prep,
             complete=bool(complete), supp=bool(supp), quality=quality,
             unit=(None if unit_row is None else
                   {"he": unit_row[1], "he_plural": unit_row[2],

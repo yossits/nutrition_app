@@ -167,7 +167,6 @@ CREATE TABLE food_curation (
     quality               smallint CHECK (quality BETWEEN 1 AND 3),
     supp                  boolean NOT NULL DEFAULT false, -- supplement (protein powder etc.)
     prep                  smallint CHECK (prep  BETWEEN 0 AND 2),
-    price                 smallint CHECK (price BETWEEN 1 AND 3),
 
     -- Serving policy --------------------------------------------------------
     -- No DEFAULT and no NOT NULL, deliberately: NULL means "nobody has ruled on
@@ -209,15 +208,14 @@ CREATE TABLE food_curation (
         NOT whole_only OR NOT by_weight
     ),
     -- Separate from the safety gate above, and not folded into it: that gate is
-    -- kashrut and allergens, and a safety constraint that also enforces a price
-    -- field is one whose name lies about what its failure means. These three are
-    -- the fields the spike reads — filters.eligible() on prep and price,
+    -- kashrut and allergens, and a safety constraint that also enforces a menu
+    -- field is one whose name lies about what its failure means. These two are
+    -- the fields the spike reads — filters.eligible() on prep,
     -- portions._options() on by_weight. Added 30.08.2026; see docs/decisions.md
     -- and db/10_menu_fields_check.sql, which applies it to a live database.
     CONSTRAINT eligible_requires_menu_fields CHECK (
         menu_eligible = false OR (
             prep      IS NOT NULL
-        AND price     IS NOT NULL
         AND by_weight IS NOT NULL
         )
     ),
@@ -283,7 +281,7 @@ SELECT f.id, f.source_code, f.class_code, f.makor, f.source,
        f.fiber_g, f.sugar_g, f.sat_fat_g, f.sodium_mg,
        f.complete,
        c.category, c.kosher, c.allergens, c.allergens_reviewed_at,
-       c.tags, c.quality, c.supp, c.prep, c.price,
+       c.tags, c.quality, c.supp, c.prep,
        c.by_weight, c.whole_only, c.max_g,
        c.curated_by, c.curated_at
 FROM foods f

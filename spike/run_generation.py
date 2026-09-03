@@ -58,12 +58,10 @@ from portions import solve, feasible, describe                                  
 from generator import generate                                                   # noqa: E402
 from profiles import PROFILES                                                    # noqa: E402
 
-# Announced only when the flag moved it. A run with no flags must print exactly
-# what it printed before the flag existed - that is the whole point of it being
-# a flag. run_spike.py prints this unconditionally because there the line has
-# always been there.
-if _args.source != food_source.SEED:
-    print(f"Food source: {SOURCE}")
+# Always announced, as run_spike.py does: a run says which food database it
+# used. Unconditional since 03.09.2026; until then the default run stayed
+# silent so its output matched the gate recorded before the flag existed.
+print(f"Food source: {SOURCE}")
 
 KEY = os.environ.get("ANTHROPIC_API_KEY")
 if not KEY:

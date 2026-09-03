@@ -22,7 +22,6 @@ def eligible(profile):
     kosher = profile.get("kosher", "none")   # none | kosher | separated
     diet = profile.get("diet", "omni")       # omni | vegetarian | vegan
     max_prep = {"minimal": 1, "medium": 2, "loves": 2}[profile.get("cooking", "medium")]
-    max_price = {"cheap": 1, "normal": 2, "any": 3}[profile.get("budget", "normal")]
 
     for f in FOODS:
         if not f["menu_eligible"]:
@@ -40,8 +39,6 @@ def eligible(profile):
         if kosher in ("kosher", "separated") and f["kosher"] == "meat" and diet != "omni":
             continue
         if f["prep"] > max_prep:
-            continue
-        if f["price"] > max_price:
             continue
         out.append(f)
     return out

@@ -534,7 +534,7 @@ def write_provenance(out):
               "container class\n\n")
     out.write("  · = the code has no source for this cell.   _ = Yossi fills it "
               "in 3d2.\n")
-    out.write(f"  Line width is {len(HEAD_1)} characters — paste into a monospace "
+    out.write("  Line width is @WIDTH@ characters — paste into a monospace "
               "block, or take one family at a time.\n")
 
 
@@ -800,9 +800,14 @@ def main():
               f"{curation_before} rows before, {curation_after} after. "
               "No curation row was written.\n")
 
-    report = out.getvalue()
-    (HERE / "curation_sheet_report.txt").write_text(report, encoding="utf-8")
-    print(report)
+    # The width is a property of the finished sheet, not of HEAD_1 - decisions.md 04.09.
+    text = out.getvalue()
+    assert text.count("@WIDTH@") == 1
+    width = max(len(line) for line in text.splitlines())
+    assert all(len(line) < width for line in text.splitlines() if "@WIDTH@" in line)
+    text = text.replace("@WIDTH@", str(width))
+    (HERE / "curation_sheet_report.txt").write_text(text, encoding="utf-8")
+    print(text)
     print(f"\n✔ Saved: {HERE / 'curation_sheet_report.txt'} — hand this over.")
 
 

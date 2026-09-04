@@ -59,7 +59,7 @@ Output schema (grams are a rough starting point, the solver will adjust them):
 {"meals":[{"name":"<meal name>","items":[{"food":"<exact name from list>","grams":<approx>}]}]}"""
 
 
-def build_prompt(profile, day_targets, meal_targets, meal_names, pool):
+def build_prompt(day_targets, meal_targets, meal_names, pool):
     lines = []
     for f in pool:
         units = " / ".join(f"{lbl}={g}g" for lbl, g in f["servings"])
@@ -124,7 +124,7 @@ def parse(text):
 
 def generate(profile, day_targets, meal_targets, meal_names, pool, key, validate_fn):
     """Returns (menu | None, attempts, usage_total, errors)."""
-    prompt = build_prompt(profile, day_targets, meal_targets, meal_names, pool)
+    prompt = build_prompt(day_targets, meal_targets, meal_names, pool)
     feedback, usage_total, last_errs = None, {"input_tokens": 0, "output_tokens": 0}, []
 
     for attempt in range(1, MAX_ATTEMPTS + 1):

@@ -3,11 +3,11 @@
 The real test of the product thesis.
 
     Mac/Linux:  ANTHROPIC_API_KEY=sk-ant-... python3 run_generation.py 30
-    Windows:    set ANTHROPIC_API_KEY=sk-ant-...
+    PowerShell: $env:ANTHROPIC_API_KEY = "sk-ant-..."
                 python run_generation.py 30
 
-Three optional flags, all off by default. With none of them passed, this file
-behaves exactly as it did before they existed:
+Four optional flags, all off by default. With none of them passed, this file
+runs its default run:
 
     --source db      run against spike/menu_foods.py instead of the 63-item
                      seed - the same switch run_spike.py carries, through the

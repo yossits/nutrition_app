@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Where the database secret comes from, for 03_load_source.py and 04_transform.py.
+"""Where the database secret comes from, for every db/ script that opens a connection.
 
 The rule: .env wins over the ambient environment.
 

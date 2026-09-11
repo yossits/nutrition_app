@@ -161,6 +161,6 @@ except psycopg.Error as e:
     msg = e.diag.message_primary
     if msg is None:
         msg = str(e)
-    print(f"\u2718 {msg} - rolled back, nothing committed")
+    print(f"STOP: {msg} - rolled back, nothing committed")
     sys.exit(1)
 print("connection closed:", "yes")

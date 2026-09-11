@@ -39,7 +39,7 @@ import sys
 
 import psycopg
 
-from _env import load_database_url, mask_dsn
+from _env import load_database_url
 
 USAGE = "usage: python db/_apply_migration.py <migration.sql> [--apply]"
 
@@ -131,27 +131,36 @@ print(f"body: {len(body)} chars, {body.count(chr(10)) + 1} lines")
 dsn = load_database_url()
 print(f"\nmode: {'REHEARSE (rollback)' if REHEARSE else 'APPLY (commit)'}")
 
-with psycopg.connect(dsn) as conn:
-    print("autocommit:", conn.autocommit, " (False = this process owns the transaction)")
-    with conn.cursor() as cur:
-        cur.execute(body)
-        n = 0
-        while True:
-            if cur.description is not None:
-                cols = [d.name for d in cur.description]
-                print(f"  result {n}: {cols} -> {cur.fetchall()}")
-            n += 1
-            if not cur.nextset():
-                break
-        print(f"  result sets walked: {n}")
-    if conn.info.transaction_status is not None:
-        print("  transaction status before the decision:", conn.info.transaction_status)
-    if REHEARSE:
-        conn.rollback()
-        print("\nROLLBACK issued - nothing was written")
-        conn.close()
-        print("connection closed by the runner, so the context manager cannot commit")
-    else:
-        conn.commit()
-        print("\nCOMMIT issued - the migration is applied")
+try:
+    with psycopg.connect(dsn) as conn:
+        print("autocommit:", conn.autocommit, " (False = this process owns the transaction)")
+        with conn.cursor() as cur:
+            cur.execute(body)
+            n = 0
+            while True:
+                if cur.description is not None:
+                    cols = [d.name for d in cur.description]
+                    print(f"  result {n}: {cols} -> {cur.fetchall()}")
+                n += 1
+                if not cur.nextset():
+                    break
+            print(f"  result sets walked: {n}")
+        if conn.info.transaction_status is not None:
+            print("  transaction status before the decision:", conn.info.transaction_status)
+        if REHEARSE:
+            conn.rollback()
+            print("\nROLLBACK issued - nothing was written")
+            conn.close()
+            print("connection closed by the runner, so the context manager cannot commit")
+        else:
+            conn.commit()
+            print("\nCOMMIT issued - the migration is applied")
+except psycopg.Error as e:
+    # The with block is already closed here: __exit__ rolled back on the
+    # exception. One readable line instead of a traceback, then exit 1 (#46).
+    msg = e.diag.message_primary
+    if msg is None:
+        msg = str(e)
+    print(f"\u2718 {msg} - rolled back, nothing committed")
+    sys.exit(1)
 print("connection closed:", "yes")

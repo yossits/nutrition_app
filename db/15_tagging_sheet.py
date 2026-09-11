@@ -101,7 +101,7 @@ FLAGS_SHOWN = "KFVC"
 SQL_CURATION = """
     SELECT source_code, menu_eligible,
            category::text AS category, kosher::text AS kosher,
-           max_g, by_weight, whole_only, prep, tags, allergens,
+           max_g, by_weight, whole_only, prep, quality, tags, allergens,
            allergens_reviewed_at
     FROM food_curation
     WHERE source_code = ANY(%s)

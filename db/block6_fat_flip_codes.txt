@@ -1,0 +1,35 @@
+# Block 6 - fat allergen flip list. Derived by query on 11.09.2026: the codes of
+# db/block5_fat_codes.txt whose food_curation row is menu_eligible = false, minus
+# 1826 (waits for a label, #13). 32 codes, in the order of the block-5 list.
+4444
+9808
+4437
+4457
+4448
+4445
+1890
+1883
+8242
+1874
+1869
+1870
+1899
+9440
+1900
+1815
+1819
+1823
+1825
+1828
+1834
+1835
+1838
+8263
+1845
+1847
+1848
+1849
+8246
+9068
+1859
+1860

@@ -223,10 +223,25 @@ def passes_floor(row, number):
     return carb_share(row) >= floors["share"]
 
 
-# copied from 07 (sort_key) — the nutrition term is -carb_share here
-def sort_key(row):
-    """Rank within a family: raw material first, then the food, then the record."""
+# Families whose eaten form is cooked. A dry form there — flour, starch,
+# uncooked pasta: moisture under DRY_MOISTURE_MAX — sinks below every wet row,
+# above the recipe sink, so a wet recipe outranks a dry raw material. 28 and 30
+# are eaten dry and have no band. NULL moisture is not dry, as in 07. dry? and
+# raw? still mark; they simply no longer consume quota (8פ-ג2, 12.09.2026).
+COOKED_FAMILIES = {26, 27, 29, 31, 32, 33}
+
+
+def dry_band(row, family):
+    m = row["moisture"]
+    return 1 if family in COOKED_FAMILIES and m is not None and float(m) < DRY_MOISTURE_MAX else 0
+
+
+# copied from 07 (sort_key) — the nutrition term is -carb_share here; the dry
+# band is the one component added in front (8פ-ג2)
+def sort_key(row, family):
+    """Rank within a family: wet before dry, raw material first, then the food, then the record."""
     return (
+        dry_band(row, family),                  # a dry form sinks below every wet row (cooked families only)
         1 if row["source"] == "recipe" else 0,  # a dish sinks below every raw material
         1 if row["is_outlier"] else 0,          # Atwater outliers sink, they do not drop
         -carb_share(row),                       # the carbohydrate energy share
@@ -293,12 +308,13 @@ def is_raw_form(row, family):
 
 
 def select_candidates(pool):
-    """Pool rows -> (sheet, passing, n_excluded_total, n_excluded_carb).
+    """Pool rows -> (sheet, passing, dry_sunk, n_excluded_total, n_excluded_carb).
 
     sheet     {family_number: [(row, band), ...]} in take order
     passing   {family_number: n rows past the floor (kosher exclusions applied)}
+    dry_sunk  {family_number: n floor-passing rows with dry_band = 1}
     """
-    by_family, passing = {}, {}
+    by_family, passing, dry_sunk = {}, {}, {}
     n_excluded_total = n_excluded_carb = 0
     for row in pool:
         if is_excluded(row):
@@ -316,11 +332,21 @@ def select_candidates(pool):
 
     sheet = {}
     for number, _label, quota, _match, _floors in FAMILIES:
+        dry_sunk[number] = sum(dry_band(r, number) for r in by_family.get(number, []))
         if quota == 0:
             continue
-        rows = sorted(by_family.get(number, []), key=sort_key)
-        sheet[number] = take_with_cap(rows, quota)
-    return sheet, passing, n_excluded_total, n_excluded_carb
+        rows = sorted(by_family.get(number, []), key=lambda r: sort_key(r, number))
+        # The two bands — the p4 cap and the refill — run on the wet rows only;
+        # the dry rows are a third band, taken in rank order only if the quota
+        # is still short after both wet bands. A cap crossing into the dry rows
+        # is what the first 8פ-ג2 fix got wrong (S5): p4 5610, all dry, still had
+        # room under the cap and took three uncooked pastas ahead of 77 wet rows.
+        wet = [r for r in rows if dry_band(r, number) == 0]
+        dry = [r for r in rows if dry_band(r, number) == 1]
+        taken = take_with_cap(wet, quota)
+        taken += [(r, 3) for r in dry[:quota - len(taken)]]
+        sheet[number] = taken
+    return sheet, passing, dry_sunk, n_excluded_total, n_excluded_carb
 
 
 def num(value, digits):
@@ -353,7 +379,7 @@ def main():
             curation_after = cur.fetchone()["n"]
         conn.rollback()
 
-    sheet, passing, n_excl_total, n_excl_carb = select_candidates(pool)
+    sheet, passing, dry_sunk, n_excl_total, n_excl_carb = select_candidates(pool)
 
     # ---- the TSV -----------------------------------------------------------
     rows_out = []
@@ -393,7 +419,7 @@ def main():
     print(f"corn (33) source_code set from LIKE {CORN_PATTERN!r} in p4 {CORN_P4}: "
           + ", ".join(sorted(CORN_CODES, key=int)) + f"  (n={len(CORN_CODES)})")
     print()
-    print("family | label | quota | floor-passing | band1 | band2 | in sheet | recipes | dry? | fiber? | outlier? | eligible today")
+    print("family | label | quota | floor-passing | dry_sunk | band1 | band2 | in sheet | recipes | dry? | fiber? | outlier? | eligible today")
     total = 0
     per_family = {}
     for number, label, quota, _match, _floors in FAMILIES:
@@ -410,7 +436,7 @@ def main():
         per_family[number] = n_sheet
         total += n_sheet
         short = "   POOL EXHAUSTED" if (quota and n_pass < quota) else ""
-        print(f"{number} | {label} | {quota} | {n_pass} | {b1} | {b2} | {n_sheet} | {n_rec} | {n_dry} | {n_fib} | {n_out} | {n_eli}{short}")
+        print(f"{number} | {label} | {quota} | {n_pass} | {dry_sunk.get(number, 0)} | {b1} | {b2} | {n_sheet} | {n_rec} | {n_dry} | {n_fib} | {n_out} | {n_eli}{short}")
         # S5: a family with more passing rows than its quota fills it exactly
         if quota and n_pass > quota:
             assert n_sheet == quota, f"family {number}: {n_sheet} in sheet, quota {quota}, passing {n_pass}"

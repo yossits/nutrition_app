@@ -1,4 +1,4 @@
-# veg - block 8י yes (76): 68 from the sheet + 8 pulled by name (8י-ה, 13.09.2026)
+# veg - block 8י yes (74): 66 from the sheet + 8 pulled by name (8י-ה, 13.09.2026); 3794 and 3766 removed in 8י-ח - raw forms nobody eats, their cooked twins 3981 and 3930 are on the list
 3566
 3570
 3588
@@ -20,13 +20,11 @@
 3754
 3756
 3762
-3766
 3767
 3772
 3774
 3776
 3778
-3794
 3801
 3804
 3812

@@ -236,3 +236,58 @@ other rows with difference <= the five's max (2 g): 7 · 805 1561 1566 1825 1838
 
 **נטען:** (D1) הדלתא הנמדדת - יחסים 2.013–3.067, הצמדה של כ-2 ג' לכל היותר - היא הבסיס שמפריד את החמש; (D2) מוסכמת המשפחה גברה ב-33, ובהן חמש שנאצרו ב-3ד/3ח.
 **נמדד:** 7 מ-33 עולות 2 ג' או פחות - 805 · 1561 · 1566 · 1825 · 1838 · 1854 · 8840 - ו-6 מ-38 בדיוק 2 ג', החמש ו-805. חמש השורות מ-3ד/3ח אינן מוסכמת המשפחה, שנקבעה ב-11.09 אחריהן: 3223 קשור ליחידה, 805 · 1267 · 8840 בין השמונה שנגזרו מהיחידה (מוסק, ראה #53 למעלה), 1854 שווה ל-`MAX_G`. מוסכמת המשפחה - 28 שורות.
+
+## 8ת-ד - #51, `--expect-changed`
+
+**נפתח:** 14.09.2026 01:45:41.982 · **נכתב:** 01:58:15.732 · 12:33. בלי מסד, בלי 09, בלי מיגרציה.
+
+**מה נמצא לפני התכנון.** הכלי לא השתנה מאז `36cfac6` (6ש-א). `--expect-added` נקרא בלולאת `parse_args` - נתיב אחד, פעם אחת, דגל אחר שמתחיל ב-`-` עוצר, וכל נתיב נבדק ב-`is_file`; הקובץ נקרא ב-`read_codes` לתוך set. הכישלונות נאספים ברשימה אחת - שינוי ברשומה משותפת, רשומה שנעלמה, ותוספות לא-צפויות או חסרות - וה-exit נקבע בסוף `main`: רשימה לא ריקה מדפיסה `FAIL` ויוצאת 1. הלולאה על הרשומות המשותפות קוראת ל-`field_differences`, שמשווה את איחוד המפתחות חוץ מ-`id` ב-`!=`, ומדפיסה שורת `changed` לכל שדה. סוויטה בריפו לא הייתה: הפיקסצ'רים של 6ש-א ב-`_scratch/block-6a`.
+
+**הממשק.** `--expect-changed PATH`, פעם אחת, לבד או לצד `--expect-added`. רשומה בשורה - `source_code`, TAB, ושמות שדות מופרדים בפסיק - בכללי קובץ הקודים. רשומה ברשימה חייבת להשתנות בדיוק בשדות שלה; שדה לא-רשום נכשל ונקוב בשמו, שדה רשום שלא השתנה נכשל, קוד שאינו בשני הייצואים נכשל. שורה פגומה, כפילות, שדה שאף רשומה אינה נושאת, `id`, וקוד בשני הדגלים עוצרים לפני ההשוואה.
+
+**המפריד.** TAB ופסיק - הצורה של `db/block6_protein_allergens.tsv`, שבה `source_code`, TAB, ואלרגנים מופרדים בפסיק. הסוגריים המסולסלים שם הם בשביל cast ל-Postgres ולא נלקחו.
+
+**כפילויות.** קוד פעמיים עוצר, בניגוד ל-`--expect-added`: שתי שורות לרשומה אחת הן שתי ציפיות, ואיחודן מרחיב את מה שעובר. שדה פעמיים עוצר: `unit,unit` נקרא כשדה שני שנכוון ולא נכתב.
+
+**הסוויטה - `db/_compare_export_suite.py`, אחרי ההמרה ל-CRLF.** R1–R6 מוצמדים לפלט של הכלי ב-`c668e42`; E1–E15 הם הסמנטיקה של #51.
+
+```text
+PASS  R1 no flags, identical  (exit 0)
+PASS  R2 no flags, max_g changed  (exit 1)
+PASS  R3 no flags, record gone  (exit 1)
+PASS  R4 expect-added, matches  (exit 0)
+PASS  R5 expect-added, wrong  (exit 1)
+PASS  R6 no flags, every id shifted  (exit 0)
+PASS  E1 3962 unit, as listed  (exit 0)
+PASS  E2 #52: 2828 listed for unit, servings changed  (exit 1)
+PASS  E3 listed change did not happen  (exit 1)
+PASS  E4 listed code in neither export  (exit 1)
+PASS  E5 field no record carries  (exit 1)
+PASS  E6 unlisted record changed  (exit 1)
+PASS  E7 one of two listed fields did not change  (exit 1)
+PASS  E8 both flags, both as listed  (exit 0)
+PASS  E9 id listed  (exit 1)
+PASS  E10 code named twice  (exit 1)
+PASS  E11 line without a TAB  (exit 1)
+PASS  E12 field named twice  (exit 1)
+PASS  E13 code under both flags  (exit 1)
+PASS  E14 --expect-changed twice  (exit 1)
+PASS  E15 listed code was added  (exit 1)
+21 of 21 cases pass
+```
+
+**שער S5 - הכלי הישן מול החדש, stdout, stderr ו-exit בית-בית.**
+
+```text
+PASS  S5-G1 no flags, current export (264, a1958384) vs an identical copy
+PASS  S5-G2 --expect-added, 6ch-g pair (56 -> 150) with block6_protein_flip_codes.txt
+PASS  6s-a T1 base vs base
+PASS  6s-a T2 base vs t2_maxg
+PASS  6s-a T3 base vs t3_removed
+PASS  6s-a T4 base vs t4_added, expect_right
+PASS  6s-a T5 base vs t4_added, expect_wrong
+PASS  6s-a T6 base vs t6_ids
+8 of 8 gate runs pass
+```
+
+**ממצא, לא תוקן.** בלי `PYTHONIOENCODING=utf-8` ועם stdout מנותב, הכלי ב-`c668e42` והכלי החדש נופלים על `UnicodeEncodeError` ב-exit 1 ברגע ששדה עברי משתנה, אף שהכותרת אומרת שהפלט ASCII בלבד. השער של 8ת-ה נוגע בשדה `unit` העברי.

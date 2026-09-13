@@ -37,6 +37,8 @@ loads 07 and 09 (the module names start with a digit):
   09  choose_unit() · SQL_SERVINGS — through 11's build_items()
   11  build_items() — kosher, supp, by_weight, the unit, whole_only, the flag
       mask; SQL_COMPONENTS; the row helpers and the @WIDTH@ mechanism
+  20  family_of() · CORN_SQL · floors_for() — the carbohydrate families 26–39,
+      asked only for a code 07 does not place (8פ-ה2, 13.09.2026)
 
 A column that no existing function computes stays blank and is named at the
 end of the sheet. tags is one of them: nothing in db/ proposes tags today.
@@ -91,6 +93,35 @@ NAME_W = SHEET.NAME_W
 RULE = SHEET.RULE
 pad_name = SHEET.pad_name
 num = SHEET.num
+
+# The carbohydrate families live in 20, not in 07 (8פ-ה2, 13.09.2026). Loaded
+# by the same path mechanism; 07 and 20 are not modified. 20's FAMILIES rows
+# are (number, label, quota, match, floors); the numbers 26–39 continue §5.5's
+# count, so they slot into 11's FAMILY_NO beside 07's 1–25.
+CARB = load_by_path("carb_candidates", "20_carb_candidates.py")
+CARB_FAMILIES = [(no, label, quota) for no, label, quota, _m, _f in CARB.FAMILIES]
+CARB_LABEL = {no: label for no, label, _q in CARB_FAMILIES}
+assert sorted(no for no, _l, q in CARB_FAMILIES if q > 0) == list(range(26, 34))
+
+# Family-level proposals for the eight carb families with a quota, keyed by
+# 20's own labels: kosher parve for all eight; vegan for the plant-only
+# families; blank for bread (26) and breakfast cereals (30), where egg, milk
+# and honey are decided item by item. Merged into the dicts build_items reads,
+# for this process only — 11's file is untouched and its fat/protein entries
+# are not changed, which the identity gate on both sheets proves.
+CARB_KOSHER = {label: "parve" for no, label, quota in CARB_FAMILIES if quota > 0}
+CARB_VEGAN = {label: (None if no in (26, 30) else True)
+              for no, label, quota in CARB_FAMILIES if quota > 0}
+SHEET.FAMILY_NO.update({label: no for no, label, _q in CARB_FAMILIES})
+SHEET.KOSHER_BY_FAMILY.update(CARB_KOSHER)
+SHEET.VEGAN_BY_FAMILY.update(CARB_VEGAN)
+
+
+def describe_carb_floors(number):
+    """The carb family's entry threshold, printed beside it in the wide sheet —
+    20's floors_for, in the shape 07's describe_floors uses."""
+    floors = CARB.floors_for(number)
+    return f"carb>={floors['carb_g']}, share>={floors['share']:.2f}"
 
 # Of 11's six flag letters (DRKFVC) the four block 5c asks for, in 11's order:
 # K kcal_outlier? · F fiber? · V verify_queue? · C container_21?
@@ -282,6 +313,14 @@ def main():
             cur.execute(SQL_CURATION, (codes,))
             db_by_code = {str(r["source_code"]): r for r in cur.fetchall()}
 
+            # 20's corn family (33) is an explicit source_code set that 20 fills
+            # only in its own main(), from a parameterised LIKE. Loaded by path
+            # the set is empty, so it is filled here, on this read-only
+            # connection, with the same statement and the same parameters
+            # before any family is resolved (8פ-ה2).
+            cur.execute(CARB.CORN_SQL, (list(CARB.CORN_P4), CARB.CORN_PATTERN))
+            CARB.CORN_CODES = {str(r["source_code"]) for r in cur.fetchall()}
+
         # ---- stop point 4: every code must be in 07's pool ----------------
         missing = [c for c in codes if c not in pool_by_code]
         if missing:
@@ -289,14 +328,20 @@ def main():
 
         # ---- the same shape 11 hands to build_items --------------------------
         selected = {"fat": [], "protein": []}
+        carb_selected = []
         unmapped = []
         for code in codes:
             row = pool_by_code[code]
             family = CAND.family_of(row)
-            if family is None:
+            if family is not None:
+                selected[family[1]].append((family[0], row))
+                continue
+            # No 07 family: ask 20. 07 still wins wherever it answers (8פ-ה2).
+            carb_no = CARB.family_of(row)
+            if carb_no is None:
                 unmapped.append(row)
             else:
-                selected[family[1]].append((family[0], row))
+                carb_selected.append((CARB_LABEL[carb_no], row))
 
         servings_by_code = {}
         components_by_code = {}
@@ -310,7 +355,16 @@ def main():
                 components_by_code[source_code] = n
 
         items = SHEET.build_items(selected, servings_by_code, components_by_code)
-        all_items = items["fat"] + items["protein"]
+        # The carb pairs go through the same build_items — every proposal from
+        # the same functions. 11 loops over its two categories only, so they
+        # ride in the protein slot and are relabelled; ordered by 20's family
+        # (26–33), codes order inside a family, after 07's families (8פ-ה2).
+        carb_items = SHEET.build_items({"fat": [], "protein": carb_selected},
+                                       servings_by_code, components_by_code)["protein"]
+        for it in carb_items:
+            it["category"] = "carb"
+        carb_items.sort(key=lambda it: it["family_no"])
+        all_items = items["fat"] + items["protein"] + carb_items
 
         if args.compact:
             out.write(render_compact(all_items, pool_by_code, db_by_code))
@@ -352,12 +406,17 @@ def main():
             out.write("\n\n" + RULE + "\n")
             out.write(f"▸ {title} — {len(all_items)} rows, grouped by §5.5 family\n")
             out.write(RULE + "\n")
-            for label, _cat, quota, _m, _f in FAMILIES:
+            # 07's families first, then 20's families with a quota (8פ-ה2).
+            wide_families = ([(label, quota, CAND.describe_floors(label))
+                              for label, _cat, quota, _m, _f in FAMILIES]
+                             + [(label, quota, describe_carb_floors(no))
+                                for no, label, quota in CARB_FAMILIES if quota > 0])
+            for label, quota, floors in wide_families:
                 picked = [it for it in all_items if it["family"] == label]
                 if not picked:
                     continue
                 out.write(f"\n  §5.5 #{FAMILY_NO[label]} · {label} — {len(picked)} "
-                          f"(quota {quota})  [{CAND.describe_floors(label)}]\n")
+                          f"(quota {quota})  [{floors}]\n")
                 out.write("  " + HEAD + "\n")
                 out.write("  " + "-" * len(HEAD) + "\n")
                 for it in picked:

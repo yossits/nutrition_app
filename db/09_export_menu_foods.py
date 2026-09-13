@@ -161,10 +161,17 @@ KCAL_MAX_PER_SERVING = 600.0
 # pattern: each entry is a signed judgement about one item and it bypasses the
 # rule entirely, band and ranking included.
 #
-# Deliberately empty. Every entry would be a decision about a particular food,
-# and that is curation — block 3d, not this bridge. The place to add one is the
-# moment the rule is seen to fail on a curated item.
-UNIT_BY_JUDGEMENT = {}
+# The per-item unit override of the 30.08.2026 decision; one entry today, 3962.
+# Every entry is a decision about a particular food, and that is curation —
+# block 3d onward, not this bridge. The place to add one is the moment the rule
+# is seen to fail on a curated item.
+UNIT_BY_JUDGEMENT = {
+    # 3962 frozen corn kernels: choose_unit() picks יחידה בינונית (mida 103),
+    # 100 g — a cob-shaped serving row, not a portion a person plates. The menu
+    # unit for kernels is a cup: כוס (mida 200), 165 g, the unit 3963 canned
+    # corn already gets from the rule. Decision of 13.09.2026, block 8פ-ו.
+    "3962": "200",
+}
 
 
 def _mida_codes():

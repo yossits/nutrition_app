@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-22_veg_candidates.py — the vegetable candidate sheet for block 8י (8י-ד).
+22_veg_candidates.py — the vegetable candidate sheet for block 8י (8י-ד, 8י-ד2).
 
 READ-ONLY. Opens a READ ONLY transaction as its first statement and rolls back
 at the end, exactly as 20_carb_candidates.py does. Nothing is written to the
@@ -12,7 +12,7 @@ The DSN is read from .env at the repository root — see db/_env.py.
   python db\\22_veg_candidates.py
 
 Output: db/block8_veg_candidates.tsv — UTF-8, LF, tab-separated, one header
-row, one row per sheet item, sorted by family then rank. Committed, like 20's
+row, one row per sheet item, sorted by family then p6. Committed, like 20's
 sheet: it is the sheet the owner reviews in 8י-ה.
 
 
@@ -21,8 +21,8 @@ WHAT THIS FILE IS
 20 has no vegetable branch, and 20 is not modified — the same way 20 left 07
 alone. This script COPIES 20's mechanisms (most of which 20 copied from 07) and
 applies them to the vegetable families of spec/05-food-db.md §5.5 (families
-40–55, decided in 8י-ב). Nothing is imported from 20 or 07. Each copied piece
-is marked "copied from 20" at the point of use:
+40–55, decided in 8י-ב, quota column corrected in 8י-ד2). Nothing is imported
+from 20 or 07. Each copied piece is marked "copied from 20" at the point of use:
 
   POOL_SQL                    the candidate pool, unchanged from 20 — kcal
                               present and > 0, no excluded_reason; moisture;
@@ -30,7 +30,7 @@ is marked "copied from 20" at the point of use:
   SOURCE_RANK                 ingredient 0 · industry 1 · recipe 2.
   EXCLUDED_P2/P4/P6           the kosher exclusions of §5.5, run before the
                               families (is_excluded, family_of).
-  is_dry_form / is_raw_form   the dry? and raw? marks, as 07 defines them.
+  is_dry_form / is_raw_form   the dry? and raw? marks; raw? extended for veg.
   is_excluded / family_of     first match wins; exclusions before families.
 
 What is NOT copied, and why:
@@ -40,10 +40,9 @@ What is NOT copied, and why:
                               for a caller to run. The 24 corn codes are only
                               an EXCLUSION here, and they are read from the
                               §5.5 row "| 33 |" at import time.
-  take_with_cap / the dry band  replaced by the three bands below. There is no
-                              dry band: a dry form falls out on carb_g < 15.
+  quotas, caps and bands      replaced by coverage, below.
 
-The families are not typed into this file. The tests, the quotas and the
+The families are not typed into this file. The tests, the quota column and the
 "במאגר" counts are parsed from the §5.5 vegetable table at import time, so the
 spec and the sheet cannot drift apart silently; only the English labels, which
 11 and 15 use as dict keys, live here.
@@ -58,23 +57,33 @@ Then the entrance test — a ceiling, not a floor (decisions.md, 13.09.2026):
 carb_g < 15 AND kcal IS NOT NULL AND kcal <= 80 AND fat_g <= 2.
 
 
-THE BANDS
+COVERAGE, NOT A QUOTA (8י-ד2)
 
-Per family with a non-zero quota, in this order:
-  band 1  non-recipe rows, at most 1 per p6, by the ranking
-  band 2  non-recipe rows, no cap, by the ranking, until the quota fills
-  band 3  recipes, by the ranking, only if the quota is still unfilled
-The p6 cap lives inside band 1 only. In 8פ-ג2 the p4 cap crossed the dry band
-and pulled three uncooked pastas above 77 wet rows; recipe is a hard band here
-for the same reason. The ranking inside a band:
-(outlier, kcal, src_rank, servings_gate, source_code).
+The first sheet (111075f) ranked each family by kcal ascending and cut it at a
+quota. It came out as a mechanism: kcal ascending measures water, not staples —
+family 40 cut at 25.2 and 43 at 27.1, every pea form fell below the cut, and two
+of the four eligible vegetables lost their p6 to near twins. There is no column
+in the database that measures a household staple, so the quota is replaced by
+coverage: in every family whose §5.5 quota reads "כל p6", each p6 present after
+the exclusions and the entrance test contributes exactly one row. No ceiling, no
+second band, no cut. Quota-0 families take nothing and are still counted.
+
+The single row of a p6 is chosen by
+(NOT eligible, recipe, outlier, NOT has_serving, kcal, src_rank, servings_gate, source_code).
+An eligible item is the form already judged, so a near twin cannot displace it;
+a row with no serving line cannot win its p6 on being the wateriest; and kcal
+ranks the plain form before the seasoned one inside the p6, where that is what
+it means. The order of the p6 winners in the sheet is by p6 code and selects
+nothing.
 
 raw? marks and does not sink: a fresh vegetable is a fully eaten form (§5.0.2).
-It is in the TSV for the review and nowhere in sort_key or the bands.
+In the veg families it fires on the whole word טרי and on חי/חיים as whole
+words. It is in the TSV for the review and nowhere in the key or the selection.
 """
 
 import csv
 import hashlib
+import math
 import re
 import sys
 from pathlib import Path
@@ -107,6 +116,13 @@ RAW_FRESH = re.compile(r"(?<!\w)טרי(?!\w)")
 RAW_FROZEN = re.compile(r"קפוא")
 RAW_FROZEN_VETO = re.compile(r"מבושל")
 RAW_ANIMAL_FAMILIES = {"poultry", "fish & seafood", "beef, veal & lamb"}
+
+# 8י-ד2: in the veg families raw? also fires on טרי (RAW_FRESH above, as 07
+# writes it) and on חי / חיים as whole words. It marks only.
+RAW_ALIVE = re.compile(r"(?<!\w)(?:חי|חיים)(?!\w)")
+# Printed beside the count, never used for the flag: the same word with only
+# the left-hand guard, which also catches טריה · טריים · טריות.
+RAW_FRESH_LEFT_ONLY = re.compile(r"(?<!\w)טרי")
 
 # copied from 20 — kosher exclusions of §5.5
 EXCLUDED_P2 = {"22"}                                   # pork
@@ -166,6 +182,21 @@ def _corn_codes(lines):
 VEG_HEADING = "#### ירק"
 TEST_RE = re.compile(r"^(p2|p4|p6) (?:=|∈) (?:\{(?P<set>[^}]*)\}|`(?P<one>\d+)`)(?: - .*)?$")
 
+# A family whose §5.5 quota reads "כל p6" takes one row per p6, with no ceiling.
+# inf rather than a string, so `quota > 0` and `quota == 0` read the way they do
+# for 20's numeric quotas wherever a caller filters on them.
+ALL_P6 = math.inf
+QUOTA_ALL_P6 = "כל p6"
+
+
+def _quota(cell, number):
+    cell = cell.strip()
+    if cell == QUOTA_ALL_P6:
+        return ALL_P6
+    if cell.strip("*") == "0":
+        return 0
+    raise SystemExit(f"§5.5 family {number}: quota {cell!r} is neither {QUOTA_ALL_P6!r} nor 0")
+
 
 def _veg_table(lines):
     """[(number, level, codes, quota, in_db), ...] from the §5.5 vegetable table."""
@@ -185,7 +216,7 @@ def _veg_table(lines):
             raise SystemExit(f"§5.5 family {number}: cannot read the test {test!r}")
         codes = (set(re.findall(r"`(\d+)`", t.group("set"))) if t.group("set") is not None
                  else {t.group("one")})
-        out.append((int(number), t.group(1), codes, int(quota.strip("* ")), int(in_db)))
+        out.append((int(number), t.group(1), codes, _quota(quota, number), int(in_db)))
     return out
 
 
@@ -231,6 +262,7 @@ def _match(level, codes):
 FAMILIES = [(n, VEG_LABEL_EN[n], quota, _match(level, codes), {})
             for n, level, codes, quota, _in_db in VEG_TABLE]
 IN_DB_SPEC = {n: in_db for n, _l, _c, _q, in_db in VEG_TABLE}
+VEG_LABELS = set(VEG_LABEL_EN.values())
 
 # ---- the names 15 imports in 8י-ו, in the shape 15 builds for 20 ------------
 VEG_FAMILIES = [(no, label, quota) for no, label, quota, _m, _f in FAMILIES]
@@ -260,7 +292,7 @@ def describe_veg_floors(number):
 
 TSV_COLUMNS = ["family", "p2", "p4", "source_code", "name_he", "source", "kcal",
                "carb_g", "fat_g", "fiber_g", "moisture", "dry?", "raw?",
-               "fiber?", "outlier?", "eligible", "has_serving", "band", "rank"]
+               "fiber?", "outlier?", "eligible", "has_serving", "p6", "rank"]
 
 
 # copied from 20
@@ -307,48 +339,26 @@ def is_recipe(row):
     return row["source"] == "recipe"
 
 
-def sort_key(row):
-    """Rank inside a band. raw? is deliberately absent — it marks, it does not sink."""
+def p6_key(row):
+    """Choose the one row of a p6. raw? is deliberately absent — it marks, it does not sink."""
     return (
+        0 if row["eligible"] else 1,            # the form already judged
+        1 if is_recipe(row) else 0,             # a dish below every raw material
         1 if row["is_outlier"] else 0,          # Atwater outliers sink, they do not drop
-        float(row["kcal"]),                     # the plain form before the dressed one
+        0 if row["servings"] > 0 else 1,        # no serving line cannot win on water
+        float(row["kcal"]),                     # the plain form before the seasoned one
         SOURCE_RANK.get(row["source"], 3),      # ingredient before industry
-        0 if row["servings"] > 0 else 1,        # a human serving unit first
+        0 if row["servings"] > 0 else 1,        # servings gate, as in 20
         int(row["source_code"]),
     )
 
 
-def take_bands(rows, quota):
-    """rows in any order -> [(row, band), ...], at most `quota` long.
-
-    band 1  non-recipe, first row of each p6, by rank
-    band 2  non-recipe rows band 1 did not take, by rank
-    band 3  recipes, by rank
-    The p6 cap is local to band 1; bands 2 and 3 never read it.
-    """
-    ranked = sorted(rows, key=sort_key)
-    plain = [r for r in ranked if not is_recipe(r)]
-    recipes = [r for r in ranked if is_recipe(r)]
-
-    taken, seen_p6, taken_codes = [], set(), set()
-    for row in plain:
-        if len(taken) >= quota:
-            break
-        if row["p6"] not in seen_p6:
-            seen_p6.add(row["p6"])
-            taken.append((row, 1))
-            taken_codes.add(row["source_code"])
-    for row in plain:
-        if len(taken) >= quota:
-            break
-        if row["source_code"] not in taken_codes:
-            taken.append((row, 2))
-            taken_codes.add(row["source_code"])
-    for row in recipes:
-        if len(taken) >= quota:
-            break
-        taken.append((row, 3))
-    return taken
+def take_p6(rows):
+    """rows of one family -> one row per p6, the winner by p6_key, in p6 order."""
+    by_p6 = {}
+    for row in rows:
+        by_p6.setdefault(row["p6"], []).append(row)
+    return [min(group, key=p6_key) for _p6, group in sorted(by_p6.items())]
 
 
 # copied from 20 (is_dry_form) — the powder exemption is kept as written; no
@@ -362,12 +372,13 @@ def is_dry_form(row, family):
     return bool(DRY_NAME.search(name)) and not DRY_NAME_VETO.search(name)
 
 
-# copied from 20 (is_raw_form) — only the "לא מבושל" marker can fire here; the
-# fresh/frozen markers are limited to the animal families, as in 07
+# copied from 20 (is_raw_form), with the veg branch of 8י-ד2
 def is_raw_form(row, family):
     name = " ".join(str(row["name_he"]).split())
     if family != "protein powders" and RAW_NAME.search(name):
         return True
+    if family in VEG_LABELS:
+        return bool(RAW_FRESH.search(name) or RAW_ALIVE.search(name))
     if family not in RAW_ANIMAL_FAMILIES:
         return False
     if RAW_FRESH.search(name):
@@ -376,9 +387,9 @@ def is_raw_form(row, family):
 
 
 def select_candidates(pool):
-    """Pool rows -> (sheet, passing, n_excluded_total, n_excluded_veg).
+    """Pool rows -> (sheet, passing, by_family, n_excluded_total, n_excluded_veg).
 
-    sheet    {family_number: [(row, band), ...]} in take order
+    sheet    {family_number: [row, ...]} one per p6, in p6 order
     passing  {family_number: n rows past the entrance test (exclusions applied)}
     """
     by_family, passing = {}, {}
@@ -399,7 +410,7 @@ def select_candidates(pool):
     for number, _label, quota, _match, _floors in FAMILIES:
         if quota == 0:
             continue
-        sheet[number] = take_bands(by_family.get(number, []), quota)
+        sheet[number] = take_p6(by_family.get(number, []))
     return sheet, passing, by_family, n_excluded_total, n_excluded_veg
 
 
@@ -435,7 +446,7 @@ def main():
     # ---- the TSV -----------------------------------------------------------
     rows_out = []
     for number, label, quota, _match, _floors in FAMILIES:
-        for rank, (r, band) in enumerate(sheet.get(number, []), 1):
+        for rank, r in enumerate(sheet.get(number, []), 1):
             rows_out.append({
                 "family": number,
                 "p2": r["p2"],
@@ -454,7 +465,7 @@ def main():
                 "outlier?": 1 if r["is_outlier"] else 0,
                 "eligible": 1 if r["eligible"] else 0,
                 "has_serving": 1 if r["servings"] > 0 else 0,
-                "band": band,
+                "p6": r["p6"],
                 "rank": rank,
             })
     with open(OUT_PATH, "w", encoding="utf-8", newline="\n") as fh:
@@ -464,58 +475,91 @@ def main():
         writer.writerows(rows_out)
 
     # ---- the summary -------------------------------------------------------
-    print("VEG CANDIDATES — block 8י, families 40–55 of §5.5. READ-ONLY: nothing was written to the database.")
+    print("VEG CANDIDATES — block 8י, families 40–55 of §5.5, one row per p6. READ-ONLY: nothing was written to the database.")
     print(f"candidate pool {len(pool)} · kosher exclusions {n_excl_total} pool-wide, "
           f"{n_excl_veg} in veg families · food_curation {curation_before} before, {curation_after} after")
     print(f"corn (33) exclusion set read from §5.5 row 33: n={len(CORN_CODES)} · "
           f"entrance test: {describe_veg_floors(40)}")
     print()
-    print("family | label | quota | passing | spec במאגר | band1 | band2 | band3 | in sheet | dry? | raw? | fiber? | outlier? | eligible today")
-    total, stops, shortfalls, moved = 0, [], [], []
+    print("family | label | quota | passing | spec במאגר | distinct p6 | in sheet | dry? | raw? | fiber? | outlier? | eligible today | kcal > 50 | raw? left-guard-only")
+    total, stops = 0, []
     for number, label, quota, _match, _floors in FAMILIES:
         taken = sheet.get(number, [])
+        fam_rows = by_family.get(number, [])
+        n_p6 = len({r["p6"] for r in fam_rows})
         n_pass = passing.get(number, 0)
-        b = [sum(1 for _r, band in taken if band == k) for k in (1, 2, 3)]
         n_sheet = len(taken)
-        n_dry = sum(1 for r, _b in taken if is_dry_form(r, label))
-        n_raw = sum(1 for r, _b in taken if is_raw_form(r, label))
-        n_fib = sum(1 for r, _b in taken if r["fiber_g"] is None)
-        n_out = sum(1 for r, _b in taken if r["is_outlier"])
-        n_eli = sum(1 for r, _b in taken if r["eligible"])
         total += n_sheet
-        note = ""
-        if n_pass != IN_DB_SPEC[number]:
-            moved.append((number, IN_DB_SPEC[number], n_pass))
-            note += f"   MOVED from spec {IN_DB_SPEC[number]}"
-        if quota and n_sheet < quota:
-            shortfalls.append((number, quota, n_sheet))
-            note += f"   SHORTFALL {quota - n_sheet}"
-        print(f"{number} | {label} | {quota} | {n_pass} | {IN_DB_SPEC[number]} | {b[0]} | {b[1]} | {b[2]} | "
-              f"{n_sheet} | {n_dry} | {n_raw} | {n_fib} | {n_out} | {n_eli}{note}")
-        # S4: a recipe in the sheet means every non-recipe row was taken first
-        if b[2]:
-            plain = [r for r in by_family.get(number, []) if not is_recipe(r)]
-            taken_codes = {r["source_code"] for r, _b in taken}
-            left = [r for r in plain if r["source_code"] not in taken_codes]
-            if left:
-                stops.append((number, left))
-        # the quota fills exactly when there is enough
-        assert n_sheet == min(quota, n_pass), f"family {number}: {n_sheet} in sheet, quota {quota}, passing {n_pass}"
+        cells = [
+            sum(1 for r in taken if is_dry_form(r, label)),
+            sum(1 for r in taken if is_raw_form(r, label)),
+            sum(1 for r in taken if r["fiber_g"] is None),
+            sum(1 for r in taken if r["is_outlier"]),
+            sum(1 for r in taken if r["eligible"]),
+            sum(1 for r in taken if float(r["kcal"]) > 50),
+            sum(1 for r in taken if RAW_FRESH_LEFT_ONLY.search(" ".join(str(r["name_he"]).split()))
+                or RAW_ALIVE.search(" ".join(str(r["name_he"]).split()))
+                or RAW_NAME.search(" ".join(str(r["name_he"]).split()))),
+        ]
+        note = f"   MOVED from spec {IN_DB_SPEC[number]}" if n_pass != IN_DB_SPEC[number] else ""
+        q_txt = "all p6" if quota == ALL_P6 else str(quota)
+        print(f"{number} | {label} | {q_txt} | {n_pass} | {IN_DB_SPEC[number]} | {n_p6} | {n_sheet} | "
+              + " | ".join(str(c) for c in cells) + note)
+        # S4: coverage — one row per p6, every p6, no p6 twice
+        if quota > 0:
+            sheet_p6 = [r["p6"] for r in taken]
+            if n_sheet != n_p6 or len(set(sheet_p6)) != len(sheet_p6):
+                stops.append(f"S4 family {number}: {n_sheet} rows, {n_p6} distinct p6, "
+                             f"{len(sheet_p6) - len(set(sheet_p6))} p6 repeated")
+        elif n_sheet:
+            stops.append(f"quota-0 family {number} took {n_sheet} rows")
 
     print(f"\ntotal in sheet: {total} (TSV rows written: {len(rows_out)})")
     assert total == len(rows_out)
-    print("moved from the spec's במאגר column: " + (", ".join(f"{n}: {a} -> {b}" for n, a, b in moved) or "none"))
-    print("S3 quota shortfalls: " + (", ".join(f"{n}: quota {q}, in sheet {s}, short {q - s}" for n, q, s in shortfalls) or "none"))
+
+    selected = [r for number in sheet for r in sheet[number]]
+    selected_codes = {r["source_code"] for r in selected}
+    print("\nELIGIBLE TODAY in the veg families (after exclusions and the entrance test):")
+    for number in sorted(by_family):
+        for r in sorted(by_family[number], key=lambda r: int(r["source_code"])):
+            if r["eligible"]:
+                print(f"  {r['source_code']} | {' '.join(str(r['name_he']).split())} | family {number} | p6 {r['p6']} | "
+                      f"kcal {num(r['kcal'], 1)} | {'WON its p6' if r['source_code'] in selected_codes else 'NOT selected'}")
+
+    print("\nPEA ROWS in the veg families (name carries אפונה), after the entrance test:")
+    pea_p6 = {}
+    for number in sorted(by_family):
+        for r in by_family[number]:
+            if "אפונה" in str(r["name_he"]):
+                pea_p6.setdefault((number, r["p6"]), []).append(r)
+    for (number, p6), rows in sorted(pea_p6.items()):
+        winner = next((w for w in sheet.get(number, []) if w["p6"] == p6), None)
+        for r in sorted(rows, key=lambda r: int(r["source_code"])):
+            print(f"  family {number} | p6 {p6} | {r['source_code']} | {' '.join(str(r['name_he']).split())} | "
+                  f"kcal {num(r['kcal'], 1)} | {'WON its p6' if winner is r else 'lost to ' + (winner['source_code'] if winner else 'none')}")
+
+    # S5: the claim of 8י-ב that the first sheet falsified
+    over_50 = sum(1 for r in selected if float(r["kcal"]) > 50)
+    peas_in = [r for r in selected if "אפונה" in str(r["name_he"])]
+    print(f"\nS5: rows with kcal > 50 in the sheet: {over_50} · pea rows in the sheet: {len(peas_in)} "
+          f"({', '.join(r['source_code'] for r in peas_in)})")
+    if not over_50 or not peas_in:
+        for (number, p6), rows in sorted(pea_p6.items()):
+            winner = next((w for w in sheet.get(number, []) if w["p6"] == p6), None)
+            stops.append(f"S5 pea p6 {p6} (family {number}) won by "
+                         f"{winner['source_code'] if winner else 'none'}")
+        stops.append("S5 failed: no row above 50 kcal or no pea row selected")
+
     if stops:
-        for number, left in stops:
-            print(f"STOP (S4): family {number} took a recipe while {len(left)} non-recipe rows were left: "
-                  + ", ".join(f"{r['source_code']} {sort_key(r)}" for r in left))
+        for s in stops:
+            print("STOP:", s)
         sys.exit(4)
-    print("S4 OK: no family took a recipe while a non-recipe row was left")
+    print("S4 OK: every family with a quota has one row per p6, no p6 twice")
+    print("S5 OK: a row above 50 kcal and a pea row are in the sheet")
     if curation_before != curation_after:
-        print(f"STOP (S5): food_curation moved {curation_before} -> {curation_after}")
-        sys.exit(5)
-    print(f"S5 OK: food_curation {curation_before} before, {curation_after} after")
+        print(f"STOP (S6): food_curation moved {curation_before} -> {curation_after}")
+        sys.exit(6)
+    print(f"S6 OK: food_curation {curation_before} before, {curation_after} after")
     raw = OUT_PATH.read_bytes()
     n_lines = raw.count(b"\n")
     print(f"TSV: {OUT_PATH} · {len(raw)} bytes · {n_lines} lines · sha256 {hashlib.sha256(raw).hexdigest()}")

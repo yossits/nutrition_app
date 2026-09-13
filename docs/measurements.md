@@ -2000,3 +2000,26 @@ diff בין שני הייצואים: 86 שורות, מהן 17 שורות `id` מ
 | 54 | 2 | 1 | 2 | 0 | 2 |
 | 55 | 0 | 0 | 0 | 0 | 0 |
 p4 `7531`: 14 (40 בלי תנאי השומן) · p4 `7514`: 10 (29). שורות שמתאימות ליותר ממשפחה אחת ב-40–54: 0; שורות p2 72–76 בלי משפחה: 0. S3 לא ירה - כל משפחה עם מכסה מעל המכסה. הנוסח מול הנמדד (CLAUDE.md §8): 75 · 72 · 34 · 39 · 13 · 2 · 60 · 40/14 · 29/10 - תואמים; מרקים 41 מתכונים מ-60; 108:31 ו-36:41 תואמים ברזולוציית השנייה של הרישום. **פער אחד נכתב כפי שנמדד:** "2.01 יחידות" לשלוש התקרות - 322/160 · 166/82 · 220/109 = 2.01 · 2.02 · 2.02, ב-`decisions.md` (#50) וב-`open-questions.md` #50. עוגנים, כל אחד נספר בכל הקובץ: `PROGRESS.md` A1 8י-א cells '5–15 דק' | 71:49 | ⬜' 1 · `PROGRESS.md` A1 row whose first cell is 8י-א 1 · `PROGRESS.md` A2 row whose first cell is 8י-ב 1 · `PROGRESS.md` no 8י-ג row yet 0 · `05-food-db.md` A3 heading '#### הדרות כשרות' 1 · `05-food-db.md` no veg heading yet 0 · `05-food-db.md` A3 carb paragraph (whole line) 1 · `decisions.md` A5 opening string of the superseded 12.09 row 1 · `decisions.md` A5 opening string at the start of a 12.09 decision cell 1 · `decisions.md` no 13.09 cancel yet 0 · `decisions.md` A5 the other 12.09 row that already carries ↩ (not touched) 1 · `decisions.md` A4 last row of the 13.09.2026 group 1 · `2026-09-13-block-8-veg.md` no update section yet 0 · `2026-09-13-block-8-veg.md` A6 the empty 8י-ב row it follows (left as is) 1 · `open-questions.md` A7 #47 cell end 1 · `open-questions.md` A7 row whose first cell is 47 1 · `open-questions.md` A7 #50 cell end 1 · `open-questions.md` A7 row whose first cell is 50 1 · `open-questions.md` A7 #51 cell end 1 · `open-questions.md` A7 row whose first cell is 51 1 · `measurements.md` no correction paragraph yet 0 · `measurements.md` the 8י section it appends under 1.
+
+**ההערכה ל-8י-ה:** בעלים 30–60 דק', חסם עליון.
+
+**8י-ד - גיליון המועמדים.** פתיחה 16:00:56, סיום 16:21:05, 20:09 - מחושבים בפייתון; הסיום הוא רגע כתיבת הרשומה, שניות לפני קומיט הסגירה, וחותמת ה-author של הקומיט היא הסיום לסדרת הכיול. הצילום זהה לפני ואחרי - קריאה בלבד: 349 · 190 · 105 · 37 · 44 · 4 · 190 · 0 · 0. `db/22_veg_candidates.py` → `db/block8_veg_candidates.tsv`: 56 שורות ועוד כותרת, 7,096 בתים, LF, sha256 `675f7577832142f8f7326a8badb771d85999f43e3589f08989d4d99ab3f86375`, זהה בשתי הריצות. 22 מעתיק את מנגנוני 20 בלי לייבא ממנו ובלי לגעת בו; המשפחות, המכסות וקודי התירס להדרה נקראים מ-§5.5 בטעינה. בריכת המועמדים כהגדרתה ב-20: 4491. שלושה פסים לכל משפחה עם מכסה: לא-מתכון עד 1 ל-p6 · לא-מתכון בלי תקרה · מתכונים; הדירוג `(outlier, kcal, src_rank, servings_gate, source_code)`; `raw?` מסמן ואינו שוקע. `passing` = עוברות את מבחן הכניסה אחרי ההדרות; `spec במאגר` = העמודה ב-§5.5 מ-8י-ג:
+| family | label | quota | passing | spec במאגר | band1 | band2 | band3 | in sheet | dry? | raw? | fiber? | outlier? | eligible today |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 40 | fresh vegetables | 14 | 75 | 75 | 14 | 0 | 0 | 14 | 0 | 0 | 0 | 0 | 1 |
+| 41 | leafy greens | 8 | 29 | 29 | 8 | 0 | 0 | 8 | 0 | 0 | 0 | 0 | 0 |
+| 42 | broccoli | 3 | 6 | 6 | 2 | 1 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
+| 43 | cooked vegetables | 14 | 101 | 101 | 14 | 0 | 0 | 14 | 0 | 0 | 0 | 0 | 0 |
+| 44 | cooked & frozen vegetable mixes | 5 | 27 | 27 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
+| 45 | carrot | 3 | 10 | 10 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
+| 46 | pumpkin & squash | 3 | 12 | 12 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 1 | 0 |
+| 47 | tomatoes, fresh & cooked | 5 | 16 | 16 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 1 |
+| 48 | peas & carrots | 1 | 3 | 3 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 49 | packaged salads | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 50 | tomato juice & puree | 0 | 8 | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 51 | fried & roasted vegetables | 0 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 52 | veg: pickled vegetables | 0 | 24 | 24 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 53 | vegetable soups | 0 | 60 | 60 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 54 | baby purees | 0 | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 55 | vegetable remainder | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+בגיליון: 56 שורות. הדרות כשרות: 29 בכל הבריכה, 0 במשפחות הירק. תזוזה מעמודת במאגר: אין. S3, מכסה שלא התמלאה: אין. S4 ו-S5 לא ירו; `food_curation` 349 לפני ואחרי. השמות ש-15 ייבא ב-8י-ו: `VEG_FAMILIES` · `VEG_LABEL` · `VEG_KOSHER` · `VEG_VEGAN` · `describe_veg_floors()`, ולצידם `FAMILIES` · `family_of()` · `floors_for()` בצורה של 20. `VEG_KOSHER` פרווה לתשע המשפחות עם מכסה; `VEG_VEGAN` כן ל-40 · 41 · 42 · 45 · 46 · 47 · 48, ריק ל-43 ול-44. אין מקבילה ל-`CORN_SQL`: כל משפחת ירק היא מבחן p4 או p2, ו-15 אינו מריץ SQL משלו.

@@ -283,12 +283,17 @@ SQL_FOODS = """
     ORDER BY source_code::int
 """
 
+# s.mida_code breaks ties in grams. Without it two serving rows of one food at the
+# same weight came back in whatever order the plan produced, and that order is
+# the record's servings list: 190 codes planned as a nested loop on the
+# (food_id, label_he) index, 264 as a hash join over a seq scan, and 2828 swapped
+# כוס and מנה קטנה (both 30 g) with no data change. open-questions.md #52.
 SQL_SERVINGS = """
     SELECT f.source_code, s.mida_code, s.label_he, s.label_he_plural, s.grams
     FROM food_servings s
     JOIN foods f ON f.id = s.food_id
     WHERE f.source_code = ANY(%s)
-    ORDER BY f.source_code, s.grams
+    ORDER BY f.source_code, s.grams, s.mida_code
 """
 
 

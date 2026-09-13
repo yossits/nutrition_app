@@ -39,6 +39,9 @@ loads 07 and 09 (the module names start with a digit):
       mask; SQL_COMPONENTS; the row helpers and the @WIDTH@ mechanism
   20  family_of() · CORN_SQL · floors_for() — the carbohydrate families 26–39,
       asked only for a code 07 does not place (8פ-ה2, 13.09.2026)
+  22  VEG_FAMILIES · VEG_LABEL · family_of() · describe_veg_floors() — the
+      vegetable families 40–55, asked only for a code neither 07 nor 20
+      places; loading it runs no SQL (8י-ז, 13.09.2026)
 
 A column that no existing function computes stays blank and is named at the
 end of the sheet. tags is one of them: nothing in db/ proposes tags today.
@@ -115,6 +118,34 @@ CARB_VEGAN = {label: (None if no in (26, 30) else True)
 SHEET.FAMILY_NO.update({label: no for no, label, _q in CARB_FAMILIES})
 SHEET.KOSHER_BY_FAMILY.update(CARB_KOSHER)
 SHEET.VEGAN_BY_FAMILY.update(CARB_VEGAN)
+
+# The vegetable families live in 22 (8י-ז, 13.09.2026), loaded the same way;
+# 07, 20 and 22 are not modified. 22's FAMILIES rows have 20's shape and the
+# numbers 40–55; a family with a quota reads "כל p6" in §5.5 and carries
+# quota = inf, so `quota > 0` reads as it does for 20. Loading 22 runs no SQL:
+# every veg family is a p4 or p2 test, so there is no CORN_SQL to fill here.
+VEG = load_by_path("veg_candidates", "22_veg_candidates.py")
+VEG_FAMILIES = VEG.VEG_FAMILIES
+VEG_LABEL = VEG.VEG_LABEL
+assert sorted(no for no, _l, q in VEG_FAMILIES if q > 0) == list(range(40, 49))
+
+# Family-level proposals for the nine veg families with a quota, keyed by 22's
+# labels: kosher parve and vegan for all nine (8י-ו). Every meat and dairy
+# recipe was rejected in 8י-ה, so no veg family keeps a blank vegan default -
+# which is why the vegan dict is built here, as the carb one is, and not taken
+# from 22's VEG_VEGAN, which still leaves 43 and 44 blank. A label already
+# present in 11's dicts stops the run rather than being overwritten; 52 is
+# "veg: pickled vegetables" because 07's fat family 14 owns the bare name.
+VEG_KOSHER = {label: "parve" for no, label, quota in VEG_FAMILIES if quota > 0}
+VEG_VEGAN = {label: True for no, label, quota in VEG_FAMILIES if quota > 0}
+_veg_clash = sorted(set(VEG_LABEL.values()) & (set(SHEET.FAMILY_NO)
+                                               | set(SHEET.KOSHER_BY_FAMILY)
+                                               | set(SHEET.VEGAN_BY_FAMILY)))
+if _veg_clash:
+    sys.exit(f"STOP: veg family labels already in 11's family dicts: {_veg_clash}")
+SHEET.FAMILY_NO.update({label: no for no, label, _q in VEG_FAMILIES})
+SHEET.KOSHER_BY_FAMILY.update(VEG_KOSHER)
+SHEET.VEGAN_BY_FAMILY.update(VEG_VEGAN)
 
 
 def describe_carb_floors(number):
@@ -329,6 +360,7 @@ def main():
         # ---- the same shape 11 hands to build_items --------------------------
         selected = {"fat": [], "protein": []}
         carb_selected = []
+        veg_selected = []
         unmapped = []
         for code in codes:
             row = pool_by_code[code]
@@ -338,10 +370,15 @@ def main():
                 continue
             # No 07 family: ask 20. 07 still wins wherever it answers (8פ-ה2).
             carb_no = CARB.family_of(row)
-            if carb_no is None:
+            if carb_no is not None:
+                carb_selected.append((CARB_LABEL[carb_no], row))
+                continue
+            # No 20 family: ask 22. 07 and 20 still win wherever they answer (8י-ז).
+            veg_no = VEG.family_of(row)
+            if veg_no is None:
                 unmapped.append(row)
             else:
-                carb_selected.append((CARB_LABEL[carb_no], row))
+                veg_selected.append((VEG_LABEL[veg_no], row))
 
         servings_by_code = {}
         components_by_code = {}
@@ -364,7 +401,14 @@ def main():
         for it in carb_items:
             it["category"] = "carb"
         carb_items.sort(key=lambda it: it["family_no"])
-        all_items = items["fat"] + items["protein"] + carb_items
+        # The veg pairs the same way, category "veg", ordered by 22's family
+        # (40–48), codes order inside a family, after the carb block (8י-ז).
+        veg_items = SHEET.build_items({"fat": [], "protein": veg_selected},
+                                      servings_by_code, components_by_code)["protein"]
+        for it in veg_items:
+            it["category"] = "veg"
+        veg_items.sort(key=lambda it: it["family_no"])
+        all_items = items["fat"] + items["protein"] + carb_items + veg_items
 
         if args.compact:
             out.write(render_compact(all_items, pool_by_code, db_by_code))
@@ -406,11 +450,15 @@ def main():
             out.write("\n\n" + RULE + "\n")
             out.write(f"▸ {title} — {len(all_items)} rows, grouped by §5.5 family\n")
             out.write(RULE + "\n")
-            # 07's families first, then 20's families with a quota (8פ-ה2).
+            # 07's families first, then 20's families with a quota (8פ-ה2),
+            # then 22's, 40–48, whose quota is every p6 (8י-ז).
             wide_families = ([(label, quota, CAND.describe_floors(label))
                               for label, _cat, quota, _m, _f in FAMILIES]
                              + [(label, quota, describe_carb_floors(no))
-                                for no, label, quota in CARB_FAMILIES if quota > 0])
+                                for no, label, quota in CARB_FAMILIES if quota > 0]
+                             + [(label, "every p6" if quota == VEG.ALL_P6 else quota,
+                                 VEG.describe_veg_floors(no))
+                                for no, label, quota in VEG_FAMILIES if quota > 0])
             for label, quota, floors in wide_families:
                 picked = [it for it in all_items if it["family"] == label]
                 if not picked:

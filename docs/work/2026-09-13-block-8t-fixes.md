@@ -381,3 +381,38 @@ code | unit before -> after | whole_only before -> after | other columns
 **תצפיות נלוות, לא נבדקו בריצה ולא תוקנו:** (1) `portions.py:236` ו-`:254` קוראים ל-`opts.index(min(opts, ...))`, שנופל על רשימה ריקה - ופריט `by_weight` עם `max_g` מתחת ל-30 מקבל רשימה ריקה (48–49); לא נספר אם יש שורה כשירה כזו. (2) `run_generation.py:139` אינו מעביר `fat_floor` ל-`solve()` - #20. (3) ההערה ב-`09:367` על מה שהמודל קורא - ראה (ה).
 
 **לפני המדידה, ב-S1:** תא 8ת-ה קיבל את `163c028`; שורת 8ת-ה תוקנה - 11 וגיליונות השומן, החלבון והפחמימה זהים בית-בית, וגיליון הירק משתנה ב-20 השורות שברשימה; ו-`measurements` רושם את משיכת שני השינויים של הבעלים לפני כל כתיבה.
+
+## 8ת-ז - תיעוד, בלי מיגרציה
+
+**נפתח:** 14.09.2026 05:17:39.926 · **נכתב:** 05:25:40.998 · 8:01. בלי מסד, בלי שינוי בקוד קיים; `db/_effective_ceilings.py` חדש.
+
+**ההכרעה.** אין מיגרציה ב-8ת. 8ת-ו מדד שהצמדת תקרת `whole_only` למטה משאירה את רשימת האפשרויות זהה, ולכן אף כמות מוגשת לא הייתה משתנה. מה שהמדידה כן הראתה הוא ממצא, לא פגם בחמש השורות: תקרה שנכתבה בגרמים נמסרת ביחידות.
+
+**התקרה האפקטיבית - הסיכום.** הטבלה המלאה, 80 שורות, ב-`../measurements.md` בסעיף 8ת-ז.
+
+```text
+export: menu_foods.py · 219297 bytes · sha256 a1d462af4a53998c0dd7edfe08cc71502c46ae772d66380cac025a24192ad48f
+menu_eligible 264 · whole_only 80 · with a unit 80 · without a unit 0  · max_g missing 0 
+(a) protein, recorded max_g 175: rows 21 · effective min 90 · max 150 · distinct 7 · 90 x3 · 94 x3 · 95.5 x1 · 110 x1 · 120 x4 · 128 x6 · 150 x3
+(b) recorded max_g 45 {'fat': 3}: rows 3 · effective min 7.8 · max 16.5 · distinct 3 · 7.8 x1 · 9 x1 · 16.5 x1
+(b) recorded max_g 46 {'carb': 2}: rows 2 · effective min 34.5 · max 34.5 · distinct 1 · 34.5 x2
+(b) recorded max_g 90 {'carb': 4}: rows 4 · effective min 90 · max 90 · distinct 1 · 90 x4
+(b) recorded max_g 100 {'protein': 1, 'carb': 2}: rows 3 · effective min 60 · max 100 · distinct 2 · 60 x1 · 100 x2
+(b) recorded max_g 102 {'carb': 2}: rows 2 · effective min 102 · max 102 · distinct 1 · 102 x2
+(b) recorded max_g 130 {'protein': 1, 'carb': 1}: rows 2 · effective min 128 · max 130 · distinct 2 · 128 x1 · 130 x1
+(b) recorded max_g 150 {'protein': 7, 'fat': 1, 'veg': 2}: rows 10 · effective min 45 · max 150 · distinct 5 · 45 x2 · 114 x3 · 116 x1 · 148.5 x3 · 150 x1
+(b) recorded max_g 214 {'protein': 1, 'veg': 2}: rows 3 · effective min 214 · max 214 · distinct 1 · 214 x3
+(b) recorded max_g 226 {'veg': 2}: rows 2 · effective min 226 · max 226 · distinct 1 · 226 x2
+(c) three units below the recorded max_g: 23 · 856 892 894 1223 1561 1566 1574 1575 1825 1838 1845 1854 2558 3752 3778 3912 8188 8308 8348 8468 8804 8840 9821
+(d) unit above max_g, served one unit over the ceiling: 0
+(e) all rows with a unit and max_g: 235 · smallest step above max_g, served above the ceiling: 3 · 446 (whole_only False, smallest step 125 > max_g 100) · 1900 (whole_only False, smallest step 23 > max_g 15) · 8598 (whole_only False, smallest step 125 > max_g 100)
+solver cross-check: 80 of 80 agree with max(portions._options())
+```
+
+**שורת §5.0.** לפני: "תקרה שאינה כפולה שלמה של היחידה שוברת את `whole_only`." אחרי: "לפריט `whole_only` הכמויות שניתן להגיש הן יחידה אחת, שתיים או שלוש שאינן עוברות את `max_g`, ולכן תקרה שאינה כפולה שלמה של היחידה פשוט אינה ניתנת להשגה מעל הכפולה השלמה שמתחתיה — היא אינה שוברת דבר (נמדד ב-8ת-ו, 14.09.2026, `spike/portions.py:53–57`)."
+
+**#50 נסגר** כלא-פגם. **#53 נוסח מחדש במקומו:** השאלה אינה עוד איזו מוסכמת גוברת, אלא האם התקרות האפקטיביות - 175 שנמסר כ-90 עד 150 ג', ב-7 ערכים - מקובלות. **#55 חדש:** הנפילה של `portions.py:57` מגישה מעל התקרה בשלוש שורות היום, 446 · 1900 · 8598, אף אחת לא `whole_only`; 3776 לא הייתה המקרה, בניגוד להנחה שנמסרה.
+
+**8ת-ה כמקרה.** אילו תקרות העשרים היו מוצמדות ליחידה שלפני 8ת-ה: 14 לא היו היום כפולה שלמה של היחידה, 5 היו, ו-3776 לא ניתן היה להצמיד. אף אחת מהן אינה `whole_only`.
+
+**שני קומיטים.** הראשון - `db/_effective_ceilings.py`, `spec/05-food-db.md`, `measurements.md`. השני - `open-questions.md`, `PROGRESS.md`, היומן.

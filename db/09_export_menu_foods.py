@@ -171,6 +171,35 @@ UNIT_BY_JUDGEMENT = {
     # unit for kernels is a cup: כוס (mida 200), 165 g, the unit 3963 canned
     # corn already gets from the rule. Decision of 13.09.2026, block 8פ-ו.
     "3962": "200",
+
+    # #21, twenty vegetables for which choose_unit() picks a piece rather than a
+    # portion - a leaf, a floret, a 2 g "medium unit" of spinach, a 3.4 g unit of
+    # snow peas. Each gets the cup or serving row, the unit track the veg tagging
+    # decision of 13.09.2026 gives chopped and cooked vegetables; every max_g among
+    # the twenty is a whole multiple of the unit named here. 3774 and 3807 carry
+    # the same pattern and are not listed: they are by_weight, and build_records()
+    # drops their unit. db/block8t_unit_changes.tsv names the twenty for
+    # --expect-changed. Decision of 14.09.2026, block 8ת-ה.
+    "3566": "200",   # כוס 38 g, was 1203 עלה 32 g
+    "3588": "207",   # כוס קצוץ 55 g, was 1203 עלה 11 g
+    "3590": "200",   # כוס 25 g, was 103 יחידה בינונית 2 g
+    "3617": "802",   # מנה בינונית 100 g, was 1212 פרח 49 g
+    "3638": "206",   # כוס פרוסות 144 g, was 103 יחידה בינונית 64 g
+    "3672": "200",   # כוס 255 g, was 103 יחידה בינונית 100 g
+    "3673": "200",   # כוס 255 g, was 103 יחידה בינונית 152 g
+    "3756": "200",   # כוס 110 g, was 100 יחידה 14 g
+    "3772": "207",   # כוס קצוץ 70 g, was 1203 עלה 14 g
+    "3776": "200",   # כוס 100 g, was 103 יחידה בינונית 226 g
+    "3804": "207",   # כוס קצוץ 104 g, was 100 יחידה 124 g
+    "3812": "200",   # כוס 70 g, was 100 יחידה 12 g
+    "3819": "200",   # כוס 100 g, was 100 יחידה 35 g
+    "3847": "200",   # כוס 63 g, was 100 יחידה 3.4 g
+    "3929": "802",   # מנה בינונית 150 g, was 103 יחידה בינונית 164 g
+    "3930": "200",   # כוס 155 g, was 103 יחידה בינונית 10 g
+    "3932": "200",   # כוס 140 g, was 1203 עלה 14 g
+    "4063": "200",   # כוס 160 g, was 100 יחידה 2.6 g
+    "4096": "200",   # כוס 180 g, was 103 יחידה בינונית 113 g
+    "8219": "207",   # כוס קצוץ 175 g, was 1203 עלה 35 g
 }
 
 

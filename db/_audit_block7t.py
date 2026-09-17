@@ -7,7 +7,8 @@ _audit_block7t.py - opening measurement for sub-block 7ת (the label queue). Rea
 Opened in 7ת-א (15.09.2026). Every query runs in its own transaction that opens
 with SET TRANSACTION READ ONLY and is rolled back on exit - query() and
 SNAPSHOT_SQL are imported from _audit_block7a.py, unchanged. Nothing is written
-to the database. Two files are written to db/, and only when no stop fired:
+to the database. Two files are written to db/, and only when no stop fired - and
+never over a sheet that already holds the owner's data (the guard below):
 
   block7_label_codes.txt   the 34 codes of the queue, one per line, numeric order,
                            a header comment in the style of block8_carb_label_codes.txt
@@ -25,13 +26,19 @@ Sections:
   B4  fiber_g IS NULL among the 34 - plant items and the rest
   B5  the columns of food_curation, and every public column whose name could meet D2
   B6  the nine canonical metrics, after
-  B7  the codes file and the sheet
+  B7  the codes file and the sheet - refused when the sheet exists with owner data
 
 The plant marker (7ת-א, owner's ruling of 15.09.2026): a row of the 31 is a plant
 item when food_curation.tags holds 'vegan'; the 3 carbs count as plant by category.
 It rests on the tag vocabulary of the rows 16_tag_fat.sql and 18_tag_protein.sql
 wrote - {vegan} or {} and nothing else (V2 in 16, V2e in 18) - which B3 re-measures
 on the 31 and stops on if it no longer holds.
+
+The guard (7ת-ב1-2, 17.09.2026). From 7ת-ב1 on, block7_label_sheet.tsv holds the owner's data in
+its label columns, plus kcal_label and protein_g_label, and a rerun of this script would write it
+again in the 16 columns of 15.09 with the owner columns empty.
+So when the sheet exists and any row has a non-empty value in any of GUARDED_COLUMNS, stop S6
+fires and neither file is written - the codes file included.
 
 Exit 1 when a stop fires.
 """
@@ -77,6 +84,9 @@ SHEET_COLUMNS = ["source_code", "name_he", "name_en", "makor", "category", "tags
                  "ingredients_label", "allergens_label", "fiber_g_label",
                  "label_source", "label_date", "notes"]
 OWNER_COLUMNS = SHEET_COLUMNS[10:]
+# The owner columns of the sheet as it stands after 7ת-ב1, which added kcal_label and protein_g_label.
+GUARDED_COLUMNS = ("ingredients_label", "allergens_label", "fiber_g_label", "kcal_label",
+                   "protein_g_label", "label_source", "label_date", "notes")
 
 QUEUE_SQL = """
     SELECT u.code AS source_code,
@@ -145,6 +155,15 @@ def codes_of(path):
     if malformed or dup:
         stops.append(f"S4: {path.name} malformed {malformed} duplicates {dup}")
     return codes
+
+
+def rows_with_owner_data(path):
+    """source_code of every row of an existing sheet with a guarded column filled; [] when there is no file."""
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8", newline="") as fh:
+        return [r.get("source_code") or "?" for r in csv.DictReader(fh, delimiter="\t")
+                if any((r.get(c) or "").strip() for c in GUARDED_COLUMNS)]
 
 
 def main():
@@ -295,6 +314,10 @@ def main():
 
     # -------------------------------------------------------------------- B7 --
     heading("B7 - the codes file and the sheet")
+    filled = rows_with_owner_data(SHEET_OUT)
+    if filled:
+        stops.append(f"S6: {SHEET_OUT.name} exists and {len(filled)} rows carry owner data "
+                     f"({' '.join(filled)}) - neither file is written")
     if stops:
         print("not written: a stop fired")
     else:

@@ -186,6 +186,18 @@ CREATE TABLE food_curation (
     -- IS NULL, and as kcal = NULL versus kcal = 0.
     excluded_reason exclusion_reason,
 
+    -- The label record (block 7ת, decided 16.09.2026). All three NULL on a row curated
+    -- by identity. label_source is the address of the page the label was read from -
+    -- several, separated by " | ", when one row covers several versions; the image file,
+    -- on the maker's domain, when the label was read from a packaging image on the maker's
+    -- page. label_date is the day the page, or the image, was read: date, not timestamptz,
+    -- since every _at column here is timestamptz. fiber_g_label is fibre per 100 g from
+    -- the label (#59), typed as foods.fiber_g - which 04_transform.py rebuilds, and this
+    -- is not.
+    label_source  text,
+    label_date    date,
+    fiber_g_label numeric,
+
     curated_by text,
     curated_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -224,6 +236,14 @@ CREATE TABLE food_curation (
     -- partial tagging and is simply not eligible yet.
     CONSTRAINT excluded_reason_requires_ineligible CHECK (
         excluded_reason IS NULL OR NOT menu_eligible
+    ),
+    -- Two-way on purpose: a source without the day it was read cannot be checked
+    -- again, and a date without a source dates nothing. Decided 16.09.2026; see
+    -- docs/decisions.md and db/24_label_columns.sql, which applies it to a live
+    -- database.
+    CONSTRAINT label_source_and_date_together CHECK (
+        (label_source IS NULL AND label_date IS NULL)
+     OR (label_source IS NOT NULL AND label_date IS NOT NULL)
     )
 );
 

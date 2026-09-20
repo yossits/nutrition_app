@@ -1,0 +1,9 @@
+# fat - block 8ש yes (6): the olive family reopened in 8ש-ב, 20.09.2026. 4279 already carries a
+# food_curation row from 3ד (menu_eligible false since 4ג, migration 14) - the tagging migration
+# updates it and inserts the other five; V0 asserts exactly that. The other five have no row today.
+4278
+4279
+4283
+4284
+4285
+4288

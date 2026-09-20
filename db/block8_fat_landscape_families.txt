@@ -1,0 +1,241 @@
+Block 8sh (fat) - the candidate landscape by the 5.5 family. Measured 20.09.2026 in 8sh-alef.
+
+Read-only. A scratch script imported db/07_curation_candidates.py the way db/11_curation_sheet.py
+does (load_by_path) and ran its POOL_SQL through query() from db/_audit_block7a.py - one
+transaction per statement, SET TRANSACTION READ ONLY, rolled back. 07 was not edited. Nothing
+was written to the database, and the same run reproduced this file byte for byte.
+
+Snapshot before and after, db/_snapshot_ro.py --expect, exit 0 in both:
+  423 · 267 · 108 · 37 · 44 · 78 · 267 · 0 · 0
+POOL_SQL rows: 4491 · food_curation rows: 423 · foods rows: 4624
+
+Columns. spec = the 'in the pool' column of spec/05-food-db.md 5.5 · mapped = pool rows that
+family_of() gives this family · passes = of those, passes_floor() · cur = of those, carrying a
+food_curation row · elig / not_el = that split · cand = passes the floor with no curation row ·
+rec (source = recipe) · out (v_kcal_outliers) · srv0 (no serving row) · dry (is_dry_form) ·
+raw (is_raw_form) = over the candidates, as 07 computes them · rej4 = candidates that appear in
+the 'לא (136)' table of docs/work/2026-09-05-block-4-curation.md (136 codes, all distinct).
+
+| no | family | label | floors | quota | spec | mapped | passes | cur | elig | not_el | cand | rec | out | srv0 | dry | raw | rej4 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | שמן זית ואבוקדו | olive & avocado oil | fat>=10 | 4 | 4 | 4 | 4 | 3 | 3 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
+| 2 | שמן אגוזים ושומשום | nut & sesame oil | fat>=10 | 3 | 4 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 3 | שמנים ניטרליים | other neutral oil | fat>=10 | 7 | 20 | 20 | 20 | 1 | 0 | 1 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
+| 4 | זיתים | olives | fat>=10 | 10 | 15 | 15 | 13 | 1 | 0 | 1 | 12 | 2 | 1 | 0 | 0 | 0 | 12 |
+| 5 | אבוקדו | avocado | fat>=10 | 2 | 2 | 2 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 6 | טחינה ושומשום | tahini & sesame | fat>=10 | 4 | 14 | 14 | 12 | 4 | 4 | 0 | 8 | 3 | 0 | 1 | 0 | 0 | 8 |
+| 7 | גרעינים אחרים | other seeds | fat>=10 | 6 | 20 | 20 | 19 | 7 | 7 | 0 | 12 | 0 | 2 | 0 | 0 | 0 | 11 |
+| 8 | אגוזים וחמאות אגוזים | nuts & nut butters | fat>=10 | 7 | 61 | 61 | 56 | 19 | 18 | 1 | 37 | 2 | 1 | 2 | 0 | 0 | 37 |
+| 9 | חמאה וסמנה | butter & ghee | fat>=10 | 4 | 9 | 9 | 9 | 1 | 0 | 1 | 8 | 0 | 0 | 0 | 0 | 0 | 8 |
+| 10 | מרגרינה וממרחים | margarine & spreads | fat>=10 | 2 | 17 | 17 | 17 | 0 | 0 | 0 | 17 | 0 | 3 | 0 | 0 | 0 | 17 |
+| 11 | תוספי מזון | food additives | fat>=10 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
+| 12 | מיונז ורטבים | mayo & dressings | fat>=10 | 6 | 29 | 28 | 22 | 0 | 0 | 0 | 22 | 4 | 0 | 0 | 0 | 0 | 22 |
+| 13 | שומן מן החי מותך | rendered animal fat | fat>=10 | 0 | 3 | 3 | 3 | 0 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 14 | ירקות כבושים | pickled vegetables | fat>=10 | 0 | 6 | 6 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 15 | חרובים | carob | fat>=10 | 0 | 4 | 4 | 2 | 0 | 0 | 0 | 2 | 0 | 1 | 0 | 0 | 0 | 0 |
+|  | **סה"כ** |  |  | 55 | 209 | 208 | 184 | 41 | 37 | 4 | 143 | 11 | 9 | 3 | 0 | 0 | 135 |
+
+Deviation from 5.5: #12 mayo & dressings - the table records 29 in the pool, measured 28. 5.5 was not touched.
+
+Every candidate, by family in FAMILIES order, ordered (-fat_g, source_code).
+
+5.5 #1 · שמן זית ואבוקדו · olive & avocado oil - 1 candidate(s), quota 4, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4435 | שמן קנולה וזית, זיתולה, עץ הזית | 82101029 | 828.0 | 92.0 | industry | 3 | rejected-in-4 |
+
+5.5 #2 · שמן אגוזים ושומשום · nut & sesame oil - 0 candidate(s), quota 3, floors fat>=10
+(none)
+
+5.5 #3 · שמנים ניטרליים · other neutral oil - 19 candidate(s), quota 7, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4432 | שמן צמחי | 82101000 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4434 | שמן ISIO4 | 82101019 | 900.0 | 100.0 | industry | 3 | rejected-in-4 |
+| 4438 | שמן קוקוס | 82101500 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4439 | שמן קוקוס או גרעיני דקל, מוקשה - עבר הידרוגנציה | 82101510 | 900.0 | 100.0 | ingredient | 1 | rejected-in-4 |
+| 4440 | שמן תירס | 82102000 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4441 | שמן כותנה | 82103000 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4442 | שמן פשתן | 82103500 | 900.4 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4447 | שמן חריע | 82106000 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4449 | שמן סויה | 82108000 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4451 | שמן חמניות | 82108500 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4452 | שמן דקלים | 82108600 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4453 | שמן גרעיני דקלים | 82108610 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4454 | שמן דקלים למוצרי מאפה | 82108620 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4455 | שמן דקלים מוקשה לטיגון | 82108630 | 900.0 | 100.0 | ingredient | 1 | rejected-in-4 |
+| 4458 | שמן נבט חיטה | 82109000 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 8798 | שמן אורז מסובין אורז | 82109500 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 8799 | שמן, זרעי ענבים | 82101020 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 9798 | חמאת קקאו | 82109900 | 900.0 | 100.0 | ingredient | 3 | rejected-in-4 |
+| 4436 | שמן בתרסיס, PAM, אוריגינל | 82101100 | 792.3 | 78.7 | ingredient | 1 | rejected-in-4 |
+
+5.5 #4 · זיתים · olives - 12 candidate(s), quota 10, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4291 | ממרח זיתים, טפנד, אוליביה | 75510219 | 238.2 | 22.4 | industry | 2 | rejected-in-4 |
+| 4290 | זיתים מושחרים, טבעות, בית השיטה,יבנה | 75510139 | 194.0 | 19.2 | industry | 2 | rejected-in-4 |
+| 4285 | זיתים ללא גלעינים, קיבוץ יבנה, בית השיטה, אסם | 75510039 | 192.8 | 18.0 | industry | 2 | rejected-in-4 |
+| 8743 | זיתים מושחרים, חרוזית, ללא גלעין, בית השיטה | 75510059 | 221.0 | 18.0 | industry | 2 | outlier · rejected-in-4 |
+| 4281 | זיתים ירוקים, מנזנילה, קיבוץ יבנה, בית השיטה, בני דרום | 75510019 | 163.4 | 15.0 | industry | 4 | rejected-in-4 |
+| 4283 | זיתים שחורים, בני דרום, בית השיטה | 75510029 | 165.0 | 15.0 | industry | 2 | rejected-in-4 |
+| 4288 | זיתים מושחרים, קיבוץ יבנה, בית השיטה | 75510079 | 163.4 | 15.0 | industry | 2 | rejected-in-4 |
+| 4284 | זיתים ירוקים, ממולאים | 75510030 | 132.6 | 13.2 | ingredient | 4 | rejected-in-4 |
+| 4278 | זיתים, לפנ | 75510000 | 128.1 | 12.1 | ingredient | 4 | rejected-in-4 |
+| 4280 | זיתים מבושלים ברסק עגבניות ושמן סויה | 75510018 | 118.2 | 11.6 | recipe | 1 | recipe · rejected-in-4 |
+| 9358 | זיתים מבושלים ברסק עגבניות ושמן קנולה | 75510008 | 118.2 | 11.6 | recipe | 1 | recipe · rejected-in-4 |
+| 4287 | זיתים מבוקעים/נובו, קיבוץ יבנה, בית השיטה, בני דרום | 75510049 | 118.4 | 10.0 | industry | 2 | rejected-in-4 |
+
+5.5 #5 · אבוקדו · avocado - 0 candidate(s), quota 2, floors fat>=10
+(none)
+
+5.5 #6 · טחינה ושומשום · tahini & sesame - 8 candidate(s), quota 4, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 9836 | חמאת שומשום, חברת ירושלים לשומשום | 43103009 | 607.0 | 51.0 | industry | 0 | rejected-in-4 |
+| 1881 | גרעיני שומשום מלאים, כולל קלויים | 43103000 | 570.2 | 48.0 | ingredient | 3 | rejected-in-4 |
+| 8366 | סלט טחינה, בלאדי, צבר | 43103169 | 309.8 | 26.0 | industry | 3 | rejected-in-4 |
+| 1886 | סלט טחינה ביתי או טחינה גולמית מדוללת עם מלח | 43103108 | 278.9 | 24.5 | recipe | 6 | recipe · rejected-in-4 |
+| 8367 | טחינה ירוקה, טחינה ירוקה חריפה בלאדי | 43103179 | 307.0 | 24.2 | industry | 3 | rejected-in-4 |
+| 1887 | סלט טחינה | 43103109 | 290.6 | 23.2 | industry | 6 | rejected-in-4 |
+| 9828 | סלט טחינה ביתי, שומשום מלא/טחינה גולמית מלאה מדוללת ומלח | 43103128 | 261.9 | 22.5 | recipe | 6 | recipe · rejected-in-4 |
+| 1889 | סלט טחינה ירוקה, ביתי | 43103118 | 198.3 | 16.7 | recipe | 6 | recipe · rejected-in-4 |
+
+5.5 #7 · גרעינים אחרים · other seeds - 12 candidate(s), quota 6, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 9631 | גרעיני חמניות, בלי קליפה, קלויים, ללא מלח | 43102110 | 612.5 | 51.3 | ingredient | 2 | rejected-in-4 |
+| 1871 | גרעיני דלעת עם קליפה, קלויים, עם מלח | 43101119 | 601.8 | 50.0 | industry | 3 | rejected-in-4 |
+| 1880 | גרעיני חמניות בלי קליפה, קלויים, עם מלח | 43102200 | 603.8 | 49.8 | ingredient | 2 | rejected-in-4 |
+| 1878 | גרעיני אבטיח בלי קליפה, קלויים עם מלח, שקדיה | 43102129 | 582.8 | 47.6 | industry | 2 | rejected-in-4 |
+| 1872 | גרעיני דלעת עם קליפה, קלויים, ללא מלח | 43101130 | 468.3 | 36.3 | ingredient | 3 |  |
+| 1875 | גרעיני חמניות עם קליפה, לא קלויים, ללא מלח | 43102030 | 347.4 | 27.8 | ingredient | 2 | rejected-in-4 |
+| 1879 | גרעיני חמניות עם קליפה, קלויים, ללא מלח | 43102130 | 347.7 | 26.9 | ingredient | 2 | rejected-in-4 |
+| 1877 | גרעיני חמניות עם קליפה, קלויים, עם מלח | 43102119 | 304.2 | 24.0 | industry | 2 | rejected-in-4 |
+| 8250 | גרעיני דלעת, שלמים, קלויים, עם תוספת מלח | 43101110 | 500.6 | 19.4 | ingredient | 3 | outlier · rejected-in-4 |
+| 1902 | גרעיני אבטיח עם קליפה, ללא מלח | 43105000 | 222.3 | 17.5 | ingredient | 2 | rejected-in-4 |
+| 9796 | גרעיני אבטיח עם קליפה, עם מלח | 43105010 | 222.3 | 17.5 | ingredient | 2 | rejected-in-4 |
+| 1901 | קימל - כרויה, זרעונים | 43104020 | 486.2 | 14.6 | ingredient | 2 | outlier · rejected-in-4 |
+
+5.5 #8 · אגוזים וחמאות אגוזים · nuts & nut butters - 37 candidate(s), quota 7, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 8248 | אגוזי פקאן, קלייה יבשה, עם תוספת מלח | 42112010 | 779.9 | 74.3 | ingredient | 4 | rejected-in-4 |
+| 1833 | קוקוס, פתיתים | 42106030 | 669.9 | 64.5 | ingredient | 3 | rejected-in-4 |
+| 1836 | אגוזי לוז, בלי קליפה, קלויים ללא מלח | 42107010 | 673.2 | 62.4 | ingredient | 2 | rejected-in-4 |
+| 8844 | שקדים קלויים עם מלח | 42101100 | 631.4 | 55.2 | ingredient | 1 | rejected-in-4 |
+| 1818 | שקדים מעושנים, גת, שקדיה | 42101119 | 607.3 | 54.7 | industry | 3 | rejected-in-4 |
+| 1822 | שקדים קלויים ללא מלח | 42101130 | 627.6 | 54.0 | ingredient | 3 | rejected-in-4 |
+| 1862 | חמאת בוטנים מלוחה, B&D | 42202029 | 651.0 | 53.0 | industry | 3 | rejected-in-4 |
+| 1821 | שקדים, קלויים, קלייה יבשה, עם מלח | 42101200 | 618.7 | 52.5 | ingredient | 3 | rejected-in-4 |
+| 1841 | בוטנים, בלי קליפה, קלויים בשמן, ללא מלח | 42111110 | 626.9 | 52.5 | ingredient | 4 | rejected-in-4 |
+| 8656 | אגוזים קלויים ומומלחים, תערובת | 42110009 | 644.2 | 51.8 | industry | 2 | rejected-in-4 |
+| 1861 | חמאת בוטנים עם דבש, סקיפי | 42202019 | 633.0 | 51.0 | industry | 5 | rejected-in-4 |
+| 1858 | חמאת בוטנים | 42202000 | 620.4 | 50.4 | ingredient | 3 | rejected-in-4 |
+| 1842 | בוטנים, בלי קליפה, קלויים, עם תוספת מלח | 42111200 | 612.1 | 49.7 | ingredient | 4 | rejected-in-4 |
+| 1843 | בוטנים, בלי קליפה, קלויים ללא שמן ,בלי תוספת מלח | 42111210 | 612.1 | 49.7 | ingredient | 4 | rejected-in-4 |
+| 8845 | שקדים, קלויים עם מלח, בציפוי דבש | 42101350 | 595.2 | 48.6 | ingredient | 1 | rejected-in-4 |
+| 8846 | אגוזי קשיו, קלויים עם תוספת מלח | 42104100 | 611.6 | 47.8 | ingredient | 1 | rejected-in-4 |
+| 8847 | אגוזי קשיו, קלויים ללא תוספת מלח | 42104110 | 610.4 | 47.8 | ingredient | 1 | rejected-in-4 |
+| 8247 | אגוזי קשיו, קלייה יבשה, עם תוספת מלח | 42104200 | 602.7 | 46.3 | ingredient | 4 | rejected-in-4 |
+| 8249 | אגוז, פיסטוק, בלי קליפה, קלוי, עם תוספת מלח | 42114100 | 586.0 | 45.8 | ingredient | 2 | rejected-in-4 |
+| 8849 | בוטנים ללא קליפה, קלויים, עם מלח | 42111500 | 589.4 | 45.8 | ingredient | 4 | rejected-in-4 |
+| 1852 | אגוז, פיסטוק, בלי קליפה, קלוי, ללא תוספת מלח | 42114120 | 624.6 | 44.8 | ingredient | 2 | rejected-in-4 |
+| 1840 | בוטנים, עם קליפה, ללא פירוט נוסף | 42111010 | 614.8 | 44.0 | ingredient | 4 | rejected-in-4 |
+| 1846 | אגוזי פקאן, עם קליפה, לא קלויים, ללא מלח | 42112030 | 401.9 | 38.1 | ingredient | 0 | rejected-in-4 |
+| 8658 | אגוזי קשיו, מסוכרים | 42104229 | 577.5 | 37.5 | industry | 4 | rejected-in-4 |
+| 1824 | שקדים מסוכרים, שקרצי | 42101229 | 545.2 | 35.0 | industry | 1 | rejected-in-4 |
+| 1863 | חמאת בוטנים, ממרח מופחת שומן | 42202150 | 562.4 | 34.0 | ingredient | 3 | rejected-in-4 |
+| 1832 | קוקוס, בשר, טרי, ללא קליפה | 42106000 | 357.5 | 33.5 | ingredient | 2 | rejected-in-4 |
+| 1856 | אגוזי מלך, עם קליפה, לא קלויים, ללא מלח | 42116030 | 322.1 | 29.3 | ingredient | 2 | rejected-in-4 |
+| 1857 | ציפוי שקדים, ציפוי מרציפן | 42200600 | 466.9 | 27.7 | ingredient | 1 | rejected-in-4 |
+| 9816 | אגוז, פיסטוק, עם קליפה, קלוי, עם תוספת מלח | 42114110 | 310.9 | 24.3 | ingredient | 2 | rejected-in-4 |
+| 1850 | אגוז, פיסטוק, עם קליפה, ללא מלח, לא קלוי | 42114030 | 307.1 | 24.1 | ingredient | 2 | rejected-in-4 |
+| 1864 | חלב קוקוס, (נוזל המופק מטחינת הבשר עם מי הקוקוס) | 42401010 | 241.0 | 23.8 | ingredient | 2 | rejected-in-4 |
+| 1853 | אגוז, פיסטוק, עם קליפה, ללא מלח, קלוי | 42114130 | 340.8 | 23.6 | ingredient | 2 | outlier · rejected-in-4 |
+| 1816 | שקדים ירוקים, חצי בשלים | 42101020 | 275.2 | 22.2 | ingredient | 0 | rejected-in-4 |
+| 1817 | שקדים עם קליפה לא אכילה, ללא מלח | 42101030 | 258.4 | 20.0 | ingredient | 1 | rejected-in-4 |
+| 1868 | חרוסת עם אגוזי פקאן, שקדים, קוקוס, תמרים, תפוחים, מיץ תפוזים | 42501028 | 317.9 | 19.7 | recipe | 1 | recipe · rejected-in-4 |
+| 1867 | חרוסת עם אגוזי מלך,שקדים,שומשום,תמרים,צימוקים ומיץ ענבים | 42501018 | 309.2 | 13.2 | recipe | 1 | recipe · rejected-in-4 |
+
+5.5 #9 · חמאה וסמנה · butter & ghee - 8 candidate(s), quota 4, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4424 | חמאה מזוככת, סמנה | 81204000 | 896.7 | 99.5 | ingredient | 2 | rejected-in-4 |
+| 4385 | חמאה, מלוחה, תנובה | 81101009 | 742.0 | 82.0 | industry | 4 | rejected-in-4 |
+| 4388 | חמאה, תנובה, טרה | 81101109 | 742.0 | 82.0 | industry | 5 | rejected-in-4 |
+| 4386 | חמאה, מלוחה, מוקצפת | 81101010 | 733.9 | 81.1 | ingredient | 2 | rejected-in-4 |
+| 4389 | חמאה, ללא מלח, מוקצפת | 81101110 | 733.9 | 81.1 | ingredient | 2 | rejected-in-4 |
+| 4393 | חמאת שום שמיר,גד | 81101519 | 725.2 | 80.0 | industry | 1 | rejected-in-4 |
+| 9060 | חמאת שום, המחלבה | 81101549 | 723.6 | 80.0 | industry | 5 | rejected-in-4 |
+| 8953 | חמאה קלה שום שמיר, טרה | 81101539 | 390.0 | 40.0 | industry | 3 | rejected-in-4 |
+
+5.5 #10 · מרגרינה וממרחים · margarine & spreads - 17 candidate(s), quota 2, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4423 | שומן מוקשה, צמחי | 81203100 | 900.0 | 100.0 | ingredient | 2 | rejected-in-4 |
+| 4395 | מרגרינה בלובנד עם מלח, בחבילה, תלמה | 81102009 | 720.0 | 80.0 | industry | 6 | rejected-in-4 |
+| 4398 | מרגרינה מחמאה בטעם חמאה, בחבילה, תלמה | 81102029 | 720.0 | 80.0 | industry | 5 | rejected-in-4 |
+| 4408 | מרגרינה בלובנד ללא תוספת מלח, לאפייה ובישול בחבילה, תלמה | 81103039 | 720.0 | 80.0 | industry | 5 | rejected-in-4 |
+| 4414 | מרגרינה מזולה דלת מלח, חבילה, 80% שומן | 81104079 | 720.0 | 80.0 | industry | 1 | rejected-in-4 |
+| 9803 | ממרח חמאה, מליחות קלה, לורפק | 81102109 | 706.4 | 78.0 | industry | 2 | rejected-in-4 |
+| 9805 | ממרח חמאה, ללא מלח, לורפק | 81102129 | 706.4 | 78.0 | industry | 2 | rejected-in-4 |
+| 4397 | מרגרינה בלובנד, בחבילה, 60% שומן מרגרינה קלאסי ומחמאה בטעם חמאה לממרח, תלמה | 81102019 | 540.0 | 60.0 | industry | 6 | rejected-in-4 |
+| 4399 | מרגרינה מחמאה, בגביע, תלמה | 81102099 | 540.0 | 60.0 | industry | 1 | rejected-in-4 |
+| 4401 | מרגרינה מזולה, 60% שומן, טעם חמאה/טבעי, בגביע | 81102049 | 540.0 | 60.0 | industry | 5 | rejected-in-4 |
+| 4403 | מרגרינה גולדבנד, בגביע, תלמה | 81102059 | 540.0 | 60.0 | industry | 5 | rejected-in-4 |
+| 9804 | ממרח חמאה, מליחות קלה, מופחת כולסטרול, לורפק | 81102119 | 515.8 | 57.0 | industry | 2 | rejected-in-4 |
+| 4409 | מרגרינה מזולה לייט, בטעם חמאה, 40% שומן | 81104029 | 360.0 | 40.0 | industry | 5 | rejected-in-4 |
+| 8996 | מרגרינה מזולה לייט עם שמן זית | 81102089 | 360.0 | 40.0 | industry | 2 | rejected-in-4 |
+| 4412 | ממרח משמן זית, אוליביה, ויקול | 81104059 | 298.0 | 22.0 | industry | 3 | outlier · rejected-in-4 |
+| 4410 | ממרח משמן קנולה, 22% שומן, עם סיבים תזונתיים, ויקול | 81104039 | 294.4 | 21.6 | industry | 2 | outlier · rejected-in-4 |
+| 4411 | ממרח, משמן זית, 22% שומן, עם סיבים תזונתיים, ויקול | 81104049 | 278.0 | 20.0 | industry | 2 | outlier · rejected-in-4 |
+
+5.5 #11 · תוספי מזון · food additives - 1 candidate(s), quota 0, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4431 | לציטין | 81324000 | 900.0 | 100.0 | ingredient | 2 | outlier |
+
+5.5 #12 · מיונז ורטבים · mayo & dressings - 22 candidate(s), quota 6, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4472 | מיונז משמן קנולה ביתי | 83108108 | 702.9 | 76.9 | recipe | 3 | recipe · rejected-in-4 |
+| 4469 | מיונז אמיתי, שופרסל | 83107029 | 697.0 | 76.6 | industry | 3 | rejected-in-4 |
+| 4466 | מיונז רגיל | 83107000 | 679.6 | 74.8 | ingredient | 3 | rejected-in-4 |
+| 4468 | מיונז, תלמה, אסם | 83107009 | 600.2 | 65.0 | industry | 3 | rejected-in-4 |
+| 4470 | מיונז משמן קנולה, תלמה | 83107039 | 601.4 | 65.0 | industry | 4 | rejected-in-4 |
+| 4461 | רוטב ויניגרט ביתי | 83100108 | 580.9 | 64.3 | recipe | 3 | recipe · rejected-in-4 |
+| 4476 | ממרח סנדויץ, תלמה | 83110009 | 540.4 | 57.0 | industry | 3 | rejected-in-4 |
+| 4478 | רוטב קיסר לסלט, אסם | 83203009 | 490.4 | 52.0 | industry | 2 | rejected-in-4 |
+| 4463 | רוטב דבש וחרדל | 83105500 | 463.2 | 40.8 | ingredient | 2 | rejected-in-4 |
+| 9281 | רוטב פסטו ללא פרמזן | 81302068 | 346.2 | 35.2 | recipe | 3 | recipe · rejected-in-4 |
+| 4430 | רוטב פסטו עם פרמזן | 81302078 | 343.4 | 33.0 | recipe | 3 | recipe · rejected-in-4 |
+| 9726 | רוטב חרדל ודבש, הלמנס | 83105509 | 345.0 | 31.0 | industry | 2 | rejected-in-4 |
+| 8748 | רוטב אלף האיים, הלמנס | 83114009 | 313.7 | 29.1 | industry | 2 | rejected-in-4 |
+| 4492 | רוטב אלף האיים, אסם | 83206019 | 314.4 | 28.0 | industry | 2 | rejected-in-4 |
+| 9724 | רוטב פסטו איטלקי, אוליביה | 81302079 | 279.9 | 27.1 | industry | 4 | rejected-in-4 |
+| 9725 | רוטב ויניגרט, אסם | 83106029 | 287.0 | 27.0 | industry | 1 | rejected-in-4 |
+| 4473 | מיונז, כמויונז, תלמה | 83108109 | 264.4 | 25.0 | industry | 5 | rejected-in-4 |
+| 4483 | מיונז, לייט, הלמנס, תלמה | 83204029 | 240.2 | 23.4 | industry | 2 | rejected-in-4 |
+| 4488 | רוטב שום לסלט, אסם, הלמנס | 83205029 | 252.8 | 22.6 | industry | 2 | rejected-in-4 |
+| 4429 | רוטב חזרת | 81302060 | 215.4 | 21.0 | ingredient | 2 | rejected-in-4 |
+| 8749 | רוטב ויניגרט בלסמי , הלמנס | 83106019 | 220.7 | 19.3 | industry | 2 | rejected-in-4 |
+| 4427 | רוטב טרטר | 81302050 | 206.5 | 16.7 | ingredient | 2 | rejected-in-4 |
+
+5.5 #13 · שומן מן החי מותך · rendered animal fat - 3 candidate(s), quota 0, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4420 | שומן בקר | 81201050 | 900.0 | 100.0 | ingredient | 1 |  |
+| 4418 | שומן עוף | 81201000 | 838.6 | 92.2 | ingredient | 2 |  |
+| 4419 | שומן כבש (אלייה) מעובד בתוספת 10% מים,טיבון ויל | 81201009 | 564.0 | 60.0 | industry | 1 |  |
+
+5.5 #14 · ירקות כבושים · pickled vegetables - 1 candidate(s), quota 0, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 4297 | פלפל מטוגן/כבוש, סלטי צבר, שמיר | 75511049 | 113.8 | 10.6 | industry | 2 |  |
+
+5.5 #15 · חרובים · carob - 2 candidate(s), quota 0, floors fat>=10
+| source_code | name_he | class_code | kcal | fat_g | source | servings | flags |
+|---|---|---|---|---|---|---|---|
+| 1907 | ממרח חרובים, ללא סוכר, בראשית | 44101119 | 558.8 | 35.0 | industry | 2 | outlier |
+| 1906 | ממרח חרובים, בראשית | 44101109 | 549.0 | 32.0 | industry | 2 |  |

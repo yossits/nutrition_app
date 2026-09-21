@@ -1,0 +1,358 @@
+Food source: db · spike/menu_foods.py · 319 items
+Runnable profiles: 91   |   running 40
+
+    1/40  #1    1776kcal 3meals 24items   FAIL - FAT_BELOW_SAFETY_FLOOR: 57g vs 57g minimum
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=3.5  protein_err=1.1  totals={'kcal': 1714, 'protein': 145, 'fat': 42, 'carb': 175}
+           FAT_BELOW_SAFETY_FLOOR: 42g vs 57g minimum
+        attempt 2: kcal_err=0.3  protein_err=1.3  totals={'kcal': 1772, 'protein': 141, 'fat': 57, 'carb': 161}
+           FAT_BELOW_SAFETY_FLOOR: 57g vs 57g minimum
+        attempt 3: kcal_err=0.3  protein_err=1.3  totals={'kcal': 1772, 'protein': 141, 'fat': 57, 'carb': 161}
+           FAT_BELOW_SAFETY_FLOOR: 57g vs 57g minimum
+    2/40  #2    1754kcal 3meals 24items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=2.2  protein_err=1.6  totals={'kcal': 1716, 'protein': 111, 'fat': 59, 'carb': 168}
+           (accepted - no errors)
+    3/40  #3    1978kcal 3meals 24items   OK on attempt 3
+        attempts that reached the validator: 3
+        attempt 1: solver did not run
+           UNKNOWN_FOOD: עלי סלק, טרי
+        attempt 2: kcal_err=11.4  protein_err=5.1  totals={'kcal': 1753, 'protein': 111, 'fat': 60, 'carb': 172}
+           KCAL_OFF: 1753 vs 1978 (-11.4%)
+        attempt 3: kcal_err=1.6  protein_err=0.4  totals={'kcal': 1947, 'protein': 106, 'fat': 58, 'carb': 231}
+           (accepted - no errors)
+    4/40  #4    2152kcal 4meals 24items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.5  protein_err=1.7  totals={'kcal': 2163, 'protein': 164, 'fat': 54, 'carb': 239}
+           (accepted - no errors)
+    5/40  #5    2812kcal 3meals 24items   FAIL - KCAL_OFF: 2249 vs 2812 (-20.0%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=25.3  protein_err=8.6  totals={'kcal': 2102, 'protein': 169, 'fat': 65, 'carb': 191}
+           KCAL_OFF: 2102 vs 2812 (-25.3%)
+           PROTEIN_OFF: 169 vs 156 (+8.6%)
+        attempt 2: kcal_err=20.0  protein_err=9.2  totals={'kcal': 2249, 'protein': 170, 'fat': 75, 'carb': 208}
+           KCAL_OFF: 2249 vs 2812 (-20.0%)
+           PROTEIN_OFF: 170 vs 156 (+9.2%)
+        attempt 3: kcal_err=20.0  protein_err=9.2  totals={'kcal': 2249, 'protein': 170, 'fat': 75, 'carb': 208}
+           KCAL_OFF: 2249 vs 2812 (-20.0%)
+           PROTEIN_OFF: 170 vs 156 (+9.2%)
+    6/40  #6    1974kcal 5meals 24items   OK on attempt 3
+        attempts that reached the validator: 3
+        attempt 1: solver did not run
+           UNKNOWN_FOOD: עלי סלק, טרי
+        attempt 2: kcal_err=3.9  protein_err=1.8  totals={'kcal': 1896, 'protein': 178, 'fat': 31, 'carb': 211}
+           FAT_BELOW_SAFETY_FLOOR: 31g vs 52g minimum
+           FAT_OFF: 31 vs 59 (-46.9%)
+        attempt 3: kcal_err=4.1  protein_err=3.6  totals={'kcal': 2055, 'protein': 169, 'fat': 60, 'carb': 197}
+           (accepted - no errors)
+    7/40  #7    2468kcal 5meals 24items   FAIL - KCAL_OFF: 2323 vs 2468 (-5.9%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=12.0  protein_err=24.5  totals={'kcal': 2172, 'protein': 149, 'fat': 54, 'carb': 255}
+           KCAL_OFF: 2172 vs 2468 (-12.0%)
+           PROTEIN_OFF: 149 vs 120 (+24.5%)
+        attempt 2: solver did not run
+           UNKNOWN_FOOD: עלי סלק, מנגולד, מנגולד, טרי
+        attempt 3: kcal_err=5.9  protein_err=17.2  totals={'kcal': 2323, 'protein': 141, 'fat': 75, 'carb': 254}
+           KCAL_OFF: 2323 vs 2468 (-5.9%)
+           PROTEIN_OFF: 141 vs 120 (+17.2%)
+    8/40  #8    1426kcal 4meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=0.3  protein_err=0.1  totals={'kcal': 1422, 'protein': 94, 'fat': 34, 'carb': 174}
+           FAT_BELOW_SAFETY_FLOOR: 34g vs 35g minimum
+        attempt 2: kcal_err=0.9  protein_err=2.0  totals={'kcal': 1439, 'protein': 92, 'fat': 41, 'carb': 164}
+           (accepted - no errors)
+    9/40  #9    2411kcal 5meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=2.5  protein_err=3.3  totals={'kcal': 2351, 'protein': 191, 'fat': 43, 'carb': 283}
+           FAT_BELOW_SAFETY_FLOOR: 43g vs 56g minimum
+           FAT_OFF: 43 vs 72 (-40.2%)
+        attempt 2: kcal_err=0.5  protein_err=1.3  totals={'kcal': 2424, 'protein': 183, 'fat': 79, 'carb': 229}
+           (accepted - no errors)
+   10/40  #11   4073kcal 3meals 24items   FAIL - KCAL_OFF: 2504 vs 4073 (-38.5%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=49.7  protein_err=10.2  totals={'kcal': 2048, 'protein': 150, 'fat': 66, 'carb': 194}
+           KCAL_OFF: 2048 vs 4073 (-49.7%)
+           PROTEIN_OFF: 150 vs 136 (+10.2%)
+           FAT_OFF: 66 vs 122 (-45.7%)
+        attempt 2: kcal_err=43.4  protein_err=13.0  totals={'kcal': 2305, 'protein': 154, 'fat': 68, 'carb': 250}
+           KCAL_OFF: 2305 vs 4073 (-43.4%)
+           PROTEIN_OFF: 154 vs 136 (+13.0%)
+           FAT_OFF: 68 vs 122 (-44.3%)
+        attempt 3: kcal_err=38.5  protein_err=8.2  totals={'kcal': 2504, 'protein': 147, 'fat': 90, 'carb': 255}
+           KCAL_OFF: 2504 vs 4073 (-38.5%)
+           PROTEIN_OFF: 147 vs 136 (+8.2%)
+   11/40  #12   2324kcal 4meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=17.7  protein_err=9.9  totals={'kcal': 1912, 'protein': 149, 'fat': 66, 'carb': 164}
+           KCAL_OFF: 1912 vs 2324 (-17.7%)
+           PROTEIN_OFF: 149 vs 136 (+9.9%)
+        attempt 2: kcal_err=1.7  protein_err=2.1  totals={'kcal': 2284, 'protein': 139, 'fat': 83, 'carb': 230}
+           (accepted - no errors)
+   12/40  #13   3365kcal 5meals 24items   FAIL - KCAL_OFF: 2952 vs 3365 (-12.3%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=20.3  protein_err=11.8  totals={'kcal': 2682, 'protein': 187, 'fat': 75, 'carb': 294}
+           KCAL_OFF: 2682 vs 3365 (-20.3%)
+           PROTEIN_OFF: 187 vs 167 (+11.8%)
+        attempt 2: kcal_err=12.3  protein_err=7.4  totals={'kcal': 2952, 'protein': 179, 'fat': 107, 'carb': 296}
+           KCAL_OFF: 2952 vs 3365 (-12.3%)
+           PROTEIN_OFF: 179 vs 167 (+7.4%)
+        attempt 3: kcal_err=12.3  protein_err=7.4  totals={'kcal': 2952, 'protein': 179, 'fat': 107, 'carb': 296}
+           KCAL_OFF: 2952 vs 3365 (-12.3%)
+           PROTEIN_OFF: 179 vs 167 (+7.4%)
+   13/40  #14   2746kcal 5meals 24items   FAIL - KCAL_OFF: 2542 vs 2746 (-7.4%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=16.3  protein_err=10.5  totals={'kcal': 2297, 'protein': 162, 'fat': 55, 'carb': 269}
+           KCAL_OFF: 2297 vs 2746 (-16.3%)
+           PROTEIN_OFF: 162 vs 147 (+10.5%)
+        attempt 2: kcal_err=4.7  protein_err=14.2  totals={'kcal': 2616, 'protein': 168, 'fat': 86, 'carb': 271}
+           PROTEIN_OFF: 168 vs 147 (+14.2%)
+        attempt 3: kcal_err=7.4  protein_err=2.1  totals={'kcal': 2542, 'protein': 150, 'fat': 86, 'carb': 271}
+           KCAL_OFF: 2542 vs 2746 (-7.4%)
+   14/40  #15   1812kcal 5meals 24items   FAIL - PROTEIN_OFF: 119 vs 97 (+22.4%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=0.4  protein_err=47.7  totals={'kcal': 1805, 'protein': 143, 'fat': 42, 'carb': 199}
+           PROTEIN_OFF: 143 vs 97 (+47.7%)
+        attempt 2: kcal_err=0.5  protein_err=46.5  totals={'kcal': 1803, 'protein': 142, 'fat': 44, 'carb': 196}
+           PROTEIN_OFF: 142 vs 97 (+46.5%)
+        attempt 3: kcal_err=1.2  protein_err=22.4  totals={'kcal': 1789, 'protein': 119, 'fat': 52, 'carb': 197}
+           PROTEIN_OFF: 119 vs 97 (+22.4%)
+   15/40  #17   2028kcal 5meals 24items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=2.0  protein_err=2.9  totals={'kcal': 1987, 'protein': 140, 'fat': 58, 'carb': 205}
+           (accepted - no errors)
+   16/40  #18   2049kcal 4meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=5.8  protein_err=6.1  totals={'kcal': 1931, 'protein': 114, 'fat': 58, 'carb': 216}
+           KCAL_OFF: 1931 vs 2049 (-5.8%)
+        attempt 2: kcal_err=1.5  protein_err=2.3  totals={'kcal': 2019, 'protein': 109, 'fat': 68, 'carb': 219}
+           (accepted - no errors)
+   17/40  #20   1647kcal 3meals 24items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=1.0  protein_err=2.2  totals={'kcal': 1663, 'protein': 144, 'fat': 47, 'carb': 153}
+           (accepted - no errors)
+   18/40  #21   2383kcal 4meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=9.0  protein_err=2.5  totals={'kcal': 2169, 'protein': 171, 'fat': 60, 'carb': 215}
+           KCAL_OFF: 2169 vs 2383 (-9.0%)
+        attempt 2: kcal_err=0.9  protein_err=0.5  totals={'kcal': 2363, 'protein': 168, 'fat': 78, 'carb': 224}
+           (accepted - no errors)
+   19/40  #22   1953kcal 3meals 24items   OK on attempt 3
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=6.4  protein_err=9.5  totals={'kcal': 1828, 'protein': 162, 'fat': 51, 'carb': 163}
+           KCAL_OFF: 1828 vs 1953 (-6.4%)
+           PROTEIN_OFF: 162 vs 179 (-9.5%)
+           FAT_BELOW_SAFETY_FLOOR: 51g vs 54g minimum
+        attempt 2: kcal_err=0.4  protein_err=8.4  totals={'kcal': 1945, 'protein': 164, 'fat': 61, 'carb': 167}
+           PROTEIN_OFF: 164 vs 179 (-8.4%)
+        attempt 3: kcal_err=0.6  protein_err=1.4  totals={'kcal': 1942, 'protein': 181, 'fat': 54, 'carb': 166}
+           (accepted - no errors)
+   20/40  #23   2033kcal 5meals 24items   FAIL - PROTEIN_OFF: 194 vs 211 (-8.0%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=5.9  protein_err=10.0  totals={'kcal': 2153, 'protein': 190, 'fat': 60, 'carb': 200}
+           KCAL_OFF: 2153 vs 2033 (+5.9%)
+           PROTEIN_OFF: 190 vs 211 (-10.0%)
+           FAT_BELOW_SAFETY_FLOOR: 60g vs 63g minimum
+        attempt 2: kcal_err=10.1  protein_err=14.3  totals={'kcal': 2239, 'protein': 181, 'fat': 72, 'carb': 201}
+           KCAL_OFF: 2239 vs 2033 (+10.1%)
+           PROTEIN_OFF: 181 vs 211 (-14.3%)
+        attempt 3: kcal_err=2.1  protein_err=8.0  totals={'kcal': 2076, 'protein': 194, 'fat': 48, 'carb': 202}
+           PROTEIN_OFF: 194 vs 211 (-8.0%)
+           FAT_BELOW_SAFETY_FLOOR: 48g vs 63g minimum
+   21/40  #24   1755kcal 3meals 24items   FAIL - KCAL_OFF: 1903 vs 1755 (+8.4%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=4.8  protein_err=33.7  totals={'kcal': 1839, 'protein': 129, 'fat': 56, 'carb': 180}
+           PROTEIN_OFF: 129 vs 195 (-33.7%)
+           FAT_BELOW_SAFETY_FLOOR: 56g vs 59g minimum
+        attempt 2: kcal_err=11.2  protein_err=24.1  totals={'kcal': 1952, 'protein': 148, 'fat': 71, 'carb': 159}
+           KCAL_OFF: 1952 vs 1755 (+11.2%)
+           PROTEIN_OFF: 148 vs 195 (-24.1%)
+        attempt 3: kcal_err=8.4  protein_err=19.4  totals={'kcal': 1903, 'protein': 157, 'fat': 62, 'carb': 159}
+           KCAL_OFF: 1903 vs 1755 (+8.4%)
+           PROTEIN_OFF: 157 vs 195 (-19.4%)
+   22/40  #25   2377kcal 4meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=4.7  protein_err=3.9  totals={'kcal': 2266, 'protein': 176, 'fat': 63, 'carb': 229}
+           FAT_BELOW_SAFETY_FLOOR: 63g vs 69g minimum
+        attempt 2: kcal_err=0.7  protein_err=0.0  totals={'kcal': 2361, 'protein': 169, 'fat': 75, 'carb': 231}
+           (accepted - no errors)
+   23/40  #26   1791kcal 3meals 24items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.9  protein_err=1.9  totals={'kcal': 1775, 'protein': 93, 'fat': 59, 'carb': 196}
+           (accepted - no errors)
+   24/40  #27   1408kcal 4meals 24items   FAIL - FAT_BELOW_SAFETY_FLOOR: 27g vs 35g minimum
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=3.0  protein_err=1.7  totals={'kcal': 1450, 'protein': 115, 'fat': 25, 'carb': 180}
+           FAT_BELOW_SAFETY_FLOOR: 25g vs 35g minimum
+           FAT_OFF: 25 vs 42 (-41.4%)
+        attempt 2: kcal_err=27.9  protein_err=5.1  totals={'kcal': 1800, 'protein': 123, 'fat': 56, 'carb': 188}
+           KCAL_OFF: 1800 vs 1408 (+27.9%)
+        attempt 3: kcal_err=2.7  protein_err=3.4  totals={'kcal': 1446, 'protein': 113, 'fat': 27, 'carb': 177}
+           FAT_BELOW_SAFETY_FLOOR: 27g vs 35g minimum
+   25/40  #28   2394kcal 4meals 24items   FAIL - FAT_BELOW_SAFETY_FLOOR: 62g vs 67g minimum
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=12.2  protein_err=19.8  totals={'kcal': 2102, 'protein': 180, 'fat': 42, 'carb': 236}
+           KCAL_OFF: 2102 vs 2394 (-12.2%)
+           PROTEIN_OFF: 180 vs 224 (-19.8%)
+           FAT_BELOW_SAFETY_FLOOR: 42g vs 67g minimum
+           FAT_OFF: 42 vs 72 (-42.3%)
+        attempt 2: kcal_err=2.7  protein_err=14.1  totals={'kcal': 2460, 'protein': 192, 'fat': 75, 'carb': 234}
+           PROTEIN_OFF: 192 vs 224 (-14.1%)
+        attempt 3: kcal_err=1.3  protein_err=2.2  totals={'kcal': 2425, 'protein': 219, 'fat': 62, 'carb': 232}
+           FAT_BELOW_SAFETY_FLOOR: 62g vs 67g minimum
+   26/40  #29   1992kcal 4meals 24items   FAIL - KCAL_OFF: 1841 vs 1992 (-7.6%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=8.2  protein_err=20.3  totals={'kcal': 1828, 'protein': 111, 'fat': 60, 'carb': 195}
+           KCAL_OFF: 1828 vs 1992 (-8.2%)
+           PROTEIN_OFF: 111 vs 92 (+20.3%)
+        attempt 2: kcal_err=7.6  protein_err=31.9  totals={'kcal': 1841, 'protein': 121, 'fat': 59, 'carb': 195}
+           KCAL_OFF: 1841 vs 1992 (-7.6%)
+           PROTEIN_OFF: 121 vs 92 (+31.9%)
+        attempt 3: kcal_err=7.6  protein_err=31.9  totals={'kcal': 1841, 'protein': 121, 'fat': 59, 'carb': 195}
+           KCAL_OFF: 1841 vs 1992 (-7.6%)
+           PROTEIN_OFF: 121 vs 92 (+31.9%)
+   27/40  #30   2413kcal 3meals 24items   FAIL - KCAL_OFF: 2217 vs 2413 (-8.1%)
+        attempts that reached the validator: 3
+        attempt 1: solver did not run
+           UNKNOWN_FOOD: עלי סלק, טרי
+        attempt 2: kcal_err=24.9  protein_err=10.3  totals={'kcal': 1812, 'protein': 152, 'fat': 52, 'carb': 167}
+           KCAL_OFF: 1812 vs 2413 (-24.9%)
+           PROTEIN_OFF: 152 vs 138 (+10.3%)
+        attempt 3: kcal_err=8.1  protein_err=3.3  totals={'kcal': 2217, 'protein': 143, 'fat': 63, 'carb': 256}
+           KCAL_OFF: 2217 vs 2413 (-8.1%)
+   28/40  #31   1888kcal 3meals 24items   FAIL - KCAL_OFF: 1517 vs 1888 (-19.6%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=41.0  protein_err=20.4  totals={'kcal': 1114, 'protein': 72, 'fat': 12, 'carb': 167}
+           KCAL_OFF: 1114 vs 1888 (-41.0%)
+           PROTEIN_OFF: 72 vs 60 (+20.4%)
+           FAT_BELOW_SAFETY_FLOOR: 12g vs 31g minimum
+           FAT_OFF: 12 vs 57 (-79.4%)
+        attempt 2: kcal_err=19.6  protein_err=37.0  totals={'kcal': 1518, 'protein': 82, 'fat': 28, 'carb': 225}
+           KCAL_OFF: 1518 vs 1888 (-19.6%)
+           PROTEIN_OFF: 82 vs 60 (+37.0%)
+           FAT_BELOW_SAFETY_FLOOR: 28g vs 31g minimum
+           FAT_OFF: 28 vs 57 (-51.2%)
+        attempt 3: kcal_err=19.6  protein_err=35.1  totals={'kcal': 1517, 'protein': 81, 'fat': 28, 'carb': 226}
+           KCAL_OFF: 1517 vs 1888 (-19.6%)
+           PROTEIN_OFF: 81 vs 60 (+35.1%)
+           FAT_BELOW_SAFETY_FLOOR: 28g vs 31g minimum
+           FAT_OFF: 28 vs 57 (-51.2%)
+   29/40  #32   2843kcal 5meals 24items   OK on attempt 3
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=6.2  protein_err=4.1  totals={'kcal': 2666, 'protein': 143, 'fat': 66, 'carb': 351}
+           KCAL_OFF: 2666 vs 2843 (-6.2%)
+        attempt 2: kcal_err=6.2  protein_err=4.1  totals={'kcal': 2666, 'protein': 143, 'fat': 66, 'carb': 351}
+           KCAL_OFF: 2666 vs 2843 (-6.2%)
+        attempt 3: kcal_err=1.5  protein_err=4.6  totals={'kcal': 2799, 'protein': 143, 'fat': 79, 'carb': 354}
+           (accepted - no errors)
+   30/40  #33   2045kcal 3meals 24items   FAIL - KCAL_OFF: 1931 vs 2045 (-5.6%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=5.6  protein_err=0.9  totals={'kcal': 1931, 'protein': 118, 'fat': 74, 'carb': 177}
+           KCAL_OFF: 1931 vs 2045 (-5.6%)
+        attempt 2: kcal_err=5.6  protein_err=0.9  totals={'kcal': 1931, 'protein': 118, 'fat': 74, 'carb': 177}
+           KCAL_OFF: 1931 vs 2045 (-5.6%)
+        attempt 3: kcal_err=5.6  protein_err=0.9  totals={'kcal': 1931, 'protein': 118, 'fat': 74, 'carb': 177}
+           KCAL_OFF: 1931 vs 2045 (-5.6%)
+   31/40  #34   1755kcal 5meals 24items   FAIL - FAT_BELOW_SAFETY_FLOOR: 39g vs 44g minimum
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=11.4  protein_err=0.6  totals={'kcal': 1955, 'protein': 146, 'fat': 54, 'carb': 208}
+           KCAL_OFF: 1955 vs 1755 (+11.4%)
+        attempt 2: kcal_err=10.7  protein_err=0.3  totals={'kcal': 1942, 'protein': 145, 'fat': 54, 'carb': 207}
+           KCAL_OFF: 1942 vs 1755 (+10.7%)
+        attempt 3: kcal_err=1.7  protein_err=0.2  totals={'kcal': 1784, 'protein': 145, 'fat': 39, 'carb': 202}
+           FAT_BELOW_SAFETY_FLOOR: 39g vs 44g minimum
+   32/40  #35   1797kcal 3meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=12.9  protein_err=11.0  totals={'kcal': 1566, 'protein': 145, 'fat': 32, 'carb': 162}
+           KCAL_OFF: 1566 vs 1797 (-12.9%)
+           PROTEIN_OFF: 145 vs 163 (-11.0%)
+           FAT_BELOW_SAFETY_FLOOR: 32g vs 49g minimum
+           FAT_OFF: 32 vs 54 (-41.3%)
+        attempt 2: kcal_err=0.9  protein_err=0.5  totals={'kcal': 1782, 'protein': 164, 'fat': 51, 'carb': 155}
+           (accepted - no errors)
+   33/40  #36   2267kcal 3meals 24items   FAIL - PROTEIN_OFF: 203 vs 221 (-8.3%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=18.3  protein_err=27.7  totals={'kcal': 1851, 'protein': 160, 'fat': 53, 'carb': 169}
+           KCAL_OFF: 1851 vs 2267 (-18.3%)
+           PROTEIN_OFF: 160 vs 221 (-27.7%)
+           FAT_BELOW_SAFETY_FLOOR: 53g vs 66g minimum
+        attempt 2: kcal_err=2.8  protein_err=23.2  totals={'kcal': 2204, 'protein': 170, 'fat': 76, 'carb': 195}
+           PROTEIN_OFF: 170 vs 221 (-23.2%)
+        attempt 3: kcal_err=0.6  protein_err=8.3  totals={'kcal': 2280, 'protein': 203, 'fat': 73, 'carb': 190}
+           PROTEIN_OFF: 203 vs 221 (-8.3%)
+   34/40  #37   1273kcal 4meals 24items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.7  protein_err=1.8  totals={'kcal': 1264, 'protein': 71, 'fat': 41, 'carb': 139}
+           (accepted - no errors)
+   35/40  #38   2146kcal 3meals 24items   FAIL - KCAL_OFF: 1803 vs 2146 (-16.0%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=13.3  protein_err=26.2  totals={'kcal': 1860, 'protein': 109, 'fat': 53, 'carb': 221}
+           KCAL_OFF: 1860 vs 2146 (-13.3%)
+           PROTEIN_OFF: 109 vs 86 (+26.2%)
+        attempt 2: kcal_err=11.2  protein_err=22.5  totals={'kcal': 1906, 'protein': 105, 'fat': 61, 'carb': 222}
+           KCAL_OFF: 1906 vs 2146 (-11.2%)
+           PROTEIN_OFF: 105 vs 86 (+22.5%)
+        attempt 3: kcal_err=16.0  protein_err=18.4  totals={'kcal': 1803, 'protein': 102, 'fat': 60, 'carb': 198}
+           KCAL_OFF: 1803 vs 2146 (-16.0%)
+           PROTEIN_OFF: 102 vs 86 (+18.4%)
+   36/40  #39   1779kcal 3meals 24items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.2  protein_err=1.0  totals={'kcal': 1775, 'protein': 146, 'fat': 48, 'carb': 176}
+           (accepted - no errors)
+   37/40  #41   2081kcal 3meals 24items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=13.6  protein_err=0.6  totals={'kcal': 1797, 'protein': 149, 'fat': 52, 'carb': 167}
+           KCAL_OFF: 1797 vs 2081 (-13.6%)
+        attempt 2: kcal_err=0.3  protein_err=0.5  totals={'kcal': 2075, 'protein': 151, 'fat': 57, 'carb': 222}
+           (accepted - no errors)
+   38/40  #42   1500kcal 5meals 24items   FAIL - KCAL_OFF: 1672 vs 1500 (+11.5%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=4.7  protein_err=15.1  totals={'kcal': 1429, 'protein': 124, 'fat': 20, 'carb': 179}
+           PROTEIN_OFF: 124 vs 108 (+15.1%)
+           FAT_BELOW_SAFETY_FLOOR: 20g vs 45g minimum
+           FAT_OFF: 20 vs 45 (-55.9%)
+        attempt 2: kcal_err=11.0  protein_err=23.6  totals={'kcal': 1665, 'protein': 133, 'fat': 33, 'carb': 199}
+           KCAL_OFF: 1665 vs 1500 (+11.0%)
+           PROTEIN_OFF: 133 vs 108 (+23.6%)
+           FAT_BELOW_SAFETY_FLOOR: 33g vs 45g minimum
+        attempt 3: kcal_err=11.5  protein_err=23.0  totals={'kcal': 1672, 'protein': 133, 'fat': 34, 'carb': 199}
+           KCAL_OFF: 1672 vs 1500 (+11.5%)
+           PROTEIN_OFF: 133 vs 108 (+23.0%)
+           FAT_BELOW_SAFETY_FLOOR: 34g vs 45g minimum
+   39/40  #43   1938kcal 4meals 24items   FAIL - KCAL_OFF: 1623 vs 1938 (-16.2%)
+        attempts that reached the validator: 3
+        attempt 1: solver did not run
+           UNKNOWN_FOOD: עלי סלק, טרי
+        attempt 2: kcal_err=18.2  protein_err=40.6  totals={'kcal': 1585, 'protein': 108, 'fat': 44, 'carb': 177}
+           KCAL_OFF: 1585 vs 1938 (-18.2%)
+           PROTEIN_OFF: 108 vs 77 (+40.6%)
+        attempt 3: kcal_err=16.2  protein_err=38.1  totals={'kcal': 1623, 'protein': 106, 'fat': 32, 'carb': 218}
+           KCAL_OFF: 1623 vs 1938 (-16.2%)
+           PROTEIN_OFF: 106 vs 77 (+38.1%)
+           FAT_BELOW_SAFETY_FLOOR: 32g vs 35g minimum
+           FAT_OFF: 32 vs 58 (-44.3%)
+   40/40  #44   2277kcal 3meals 24items   FAIL - KCAL_OFF: 1862 vs 2277 (-18.2%)
+        attempts that reached the validator: 3
+        attempt 1: kcal_err=42.0  protein_err=17.3  totals={'kcal': 1322, 'protein': 111, 'fat': 15, 'carb': 171}
+           KCAL_OFF: 1322 vs 2277 (-42.0%)
+           PROTEIN_OFF: 111 vs 95 (+17.3%)
+           FAT_BELOW_SAFETY_FLOOR: 15g vs 32g minimum
+           FAT_OFF: 15 vs 68 (-77.5%)
+        attempt 2: kcal_err=18.2  protein_err=6.4  totals={'kcal': 1862, 'protein': 101, 'fat': 53, 'carb': 233}
+           KCAL_OFF: 1862 vs 2277 (-18.2%)
+        attempt 3: kcal_err=18.2  protein_err=6.4  totals={'kcal': 1862, 'protein': 101, 'fat': 53, 'carb': 233}
+           KCAL_OFF: 1862 vs 2277 (-18.2%)
+
+==============================================================
+Passed validation:     19/40  (48%)
+Passed FIRST attempt:  7/40  (18%)   <-- THE NUMBER
+Failed entirely:       21/40
+
+Tokens:   input 321,525   output 54,599
+Per menu: 8,038 in / 1,364 out
+Avg time: 21.1s per menu
+
+Failure reasons:
+   KCAL_OFF               14
+   PROTEIN_OFF            13
+   FAT_BELOW_SAFETY_FLOOR 8
+   FAT_OFF                2

@@ -1,0 +1,182 @@
+Food source: seed · spike/foods.py · 63 items
+Runnable profiles: 89   |   running 40
+
+    1/40  #1    1776kcal 3meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=1.2  protein_err=4.7  totals={'kcal': 1797, 'protein': 136, 'fat': 71, 'carb': 162}
+           (accepted - no errors)
+    2/40  #2    3227kcal 3meals 27items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.1  totals={'kcal': 3230, 'protein': 209, 'fat': 96, 'carb': 399}
+           (accepted - no errors)
+    3/40  #4    1805kcal 4meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.0  protein_err=0.4  totals={'kcal': 1805, 'protein': 102, 'fat': 54, 'carb': 241}
+           (accepted - no errors)
+    4/40  #5    2812kcal 3meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.2  protein_err=0.3  totals={'kcal': 2807, 'protein': 156, 'fat': 95, 'carb': 341}
+           (accepted - no errors)
+    5/40  #6    2341kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.5  protein_err=1.2  totals={'kcal': 2329, 'protein': 87, 'fat': 78, 'carb': 332}
+           (accepted - no errors)
+    6/40  #8    3991kcal 4meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=1.6  protein_err=1.6  totals={'kcal': 3927, 'protein': 179, 'fat': 161, 'carb': 489}
+           (accepted - no errors)
+    7/40  #9    2629kcal 4meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.0  totals={'kcal': 2626, 'protein': 210, 'fat': 81, 'carb': 270}
+           (accepted - no errors)
+    8/40  #11   3383kcal 3meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.0  protein_err=0.3  totals={'kcal': 3383, 'protein': 222, 'fat': 99, 'carb': 408}
+           (accepted - no errors)
+    9/40  #12   2837kcal 5meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.0  totals={'kcal': 2840, 'protein': 154, 'fat': 87, 'carb': 381}
+           (accepted - no errors)
+   10/40  #13   2554kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.0  protein_err=0.4  totals={'kcal': 2553, 'protein': 126, 'fat': 77, 'carb': 355}
+           (accepted - no errors)
+   11/40  #14   1721kcal 5meals 28items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=3.6  protein_err=7.2  totals={'kcal': 1660, 'protein': 95, 'fat': 60, 'carb': 201}
+           PROTEIN_OFF: 95 vs 89 (+7.2%)
+        attempt 2: kcal_err=0.8  protein_err=2.5  totals={'kcal': 1707, 'protein': 91, 'fat': 58, 'carb': 220}
+           (accepted - no errors)
+   12/40  #15   2115kcal 3meals 29items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=0.0  protein_err=0.4  totals={'kcal': 2114, 'protein': 222, 'fat': 66, 'carb': 164}
+           FAT_BELOW_SAFETY_FLOOR: 66g vs 66g minimum
+        attempt 2: kcal_err=0.1  protein_err=0.1  totals={'kcal': 2112, 'protein': 221, 'fat': 67, 'carb': 162}
+           (accepted - no errors)
+   13/40  #16   1595kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.3  protein_err=1.3  totals={'kcal': 1589, 'protein': 71, 'fat': 45, 'carb': 237}
+           (accepted - no errors)
+   14/40  #17   1806kcal 3meals 27items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=1.7  protein_err=4.0  totals={'kcal': 1836, 'protein': 172, 'fat': 64, 'carb': 157}
+           (accepted - no errors)
+   15/40  #18   3592kcal 3meals 29items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: kcal_err=9.0  protein_err=4.4  totals={'kcal': 3270, 'protein': 188, 'fat': 98, 'carb': 424}
+           KCAL_OFF: 3270 vs 3592 (-9.0%)
+        attempt 2: kcal_err=1.2  protein_err=0.5  totals={'kcal': 3549, 'protein': 181, 'fat': 120, 'carb': 461}
+           (accepted - no errors)
+   16/40  #19   1496kcal 5meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.4  protein_err=0.7  totals={'kcal': 1489, 'protein': 84, 'fat': 53, 'carb': 180}
+           (accepted - no errors)
+   17/40  #20   2204kcal 4meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=1.3  protein_err=4.9  totals={'kcal': 2233, 'protein': 160, 'fat': 72, 'carb': 252}
+           (accepted - no errors)
+   18/40  #21   2076kcal 3meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.6  protein_err=0.3  totals={'kcal': 2089, 'protein': 121, 'fat': 68, 'carb': 263}
+           (accepted - no errors)
+   19/40  #22   3724kcal 3meals 27items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: solver did not run
+           UNKNOWN_FOOD: Whole grain bread... wait - not in list
+        attempt 2: kcal_err=2.6  protein_err=1.8  totals={'kcal': 3628, 'protein': 187, 'fat': 148, 'carb': 394}
+           (accepted - no errors)
+   20/40  #23   1837kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.2  totals={'kcal': 1835, 'protein': 97, 'fat': 53, 'carb': 254}
+           (accepted - no errors)
+   21/40  #24   2155kcal 4meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.0  totals={'kcal': 2154, 'protein': 147, 'fat': 65, 'carb': 259}
+           (accepted - no errors)
+   22/40  #25   1423kcal 5meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.0  protein_err=0.2  totals={'kcal': 1423, 'protein': 107, 'fat': 50, 'carb': 143}
+           (accepted - no errors)
+   23/40  #26   2668kcal 5meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.0  totals={'kcal': 2664, 'protein': 104, 'fat': 87, 'carb': 380}
+           (accepted - no errors)
+   24/40  #27   1725kcal 4meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.2  totals={'kcal': 1723, 'protein': 157, 'fat': 50, 'carb': 169}
+           (accepted - no errors)
+   25/40  #28   3281kcal 3meals 29items   OK on attempt 2
+        attempts that reached the validator: 2
+        attempt 1: solver did not run
+           UNKNOWN_FOOD: Oats... wait - not available
+        attempt 2: kcal_err=2.9  protein_err=0.4  totals={'kcal': 3185, 'protein': 104, 'fat': 126, 'carb': 433}
+           (accepted - no errors)
+   26/40  #30   2586kcal 3meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.2  protein_err=0.1  totals={'kcal': 2582, 'protein': 153, 'fat': 79, 'carb': 325}
+           (accepted - no errors)
+   27/40  #31   1805kcal 5meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.0  protein_err=0.0  totals={'kcal': 1804, 'protein': 163, 'fat': 54, 'carb': 176}
+           (accepted - no errors)
+   28/40  #32   1700kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.5  totals={'kcal': 1699, 'protein': 114, 'fat': 51, 'carb': 207}
+           (accepted - no errors)
+   29/40  #33   1513kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.5  protein_err=2.3  totals={'kcal': 1506, 'protein': 94, 'fat': 42, 'carb': 201}
+           (accepted - no errors)
+   30/40  #34   1708kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.6  protein_err=1.9  totals={'kcal': 1697, 'protein': 71, 'fat': 50, 'carb': 251}
+           (accepted - no errors)
+   31/40  #35   1795kcal 3meals 23items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.7  protein_err=1.2  totals={'kcal': 1807, 'protein': 128, 'fat': 68, 'carb': 190}
+           (accepted - no errors)
+   32/40  #36   1427kcal 4meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.3  protein_err=0.9  totals={'kcal': 1431, 'protein': 104, 'fat': 46, 'carb': 161}
+           (accepted - no errors)
+   33/40  #37   2628kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.0  totals={'kcal': 2631, 'protein': 142, 'fat': 79, 'carb': 360}
+           (accepted - no errors)
+   34/40  #38   1396kcal 5meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.5  protein_err=1.9  totals={'kcal': 1388, 'protein': 106, 'fat': 41, 'carb': 160}
+           (accepted - no errors)
+   35/40  #39   1679kcal 5meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.4  totals={'kcal': 1680, 'protein': 153, 'fat': 50, 'carb': 162}
+           (accepted - no errors)
+   36/40  #40   1260kcal 4meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.2  totals={'kcal': 1261, 'protein': 79, 'fat': 39, 'carb': 160}
+           (accepted - no errors)
+   37/40  #41   2460kcal 3meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=1.1  protein_err=0.5  totals={'kcal': 2432, 'protein': 157, 'fat': 81, 'carb': 281}
+           (accepted - no errors)
+   38/40  #42   2448kcal 4meals 28items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=2.0  totals={'kcal': 2444, 'protein': 179, 'fat': 97, 'carb': 229}
+           (accepted - no errors)
+   39/40  #43   2889kcal 4meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.2  totals={'kcal': 2891, 'protein': 201, 'fat': 87, 'carb': 346}
+           (accepted - no errors)
+   40/40  #44   3599kcal 5meals 29items   OK on attempt 1
+        attempts that reached the validator: 1
+        attempt 1: kcal_err=0.1  protein_err=0.1  totals={'kcal': 3594, 'protein': 211, 'fat': 122, 'carb': 428}
+           (accepted - no errors)
+
+==============================================================
+Passed validation:     40/40  (100%)
+Passed FIRST attempt:  35/40  (88%)   <-- THE NUMBER
+Failed entirely:       0/40
+
+Tokens:   input 108,102   output 14,194
+Per menu: 2,702 in / 354 out
+Avg time: 8.3s per menu

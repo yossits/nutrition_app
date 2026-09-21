@@ -1,0 +1,9 @@
+# label condition - block 7 (#45): 6 branded meat substitutes from 8ח-ד (21.09.2026), no rows in
+# food_recipe_components. Tagged in migration 28 (8ח-ח), not flipped in 29; waiting for 7מ after #56.
+# One code per line, ascending; lines starting with # are comments.
+1796
+1797
+1800
+8865
+8866
+9758

@@ -1,0 +1,50 @@
+# protein - block 8ח yes (46): the review of 8ח-ד, decided in chat 21.09.2026 - the rows marked
+# "נכנס" in the table of section "חלבון - 8ח-ד" in docs/work/2026-09-20-block-8-protein.md.
+# One code per line, ascending; lines starting with # are comments. Tagged in 8ח-ח (migration 28);
+# input for --expect-added in 8ח-ט (migration 29, the flip).
+431
+496
+503
+520
+614
+627
+628
+725
+751
+776
+777
+801
+806
+855
+863
+871
+885
+891
+945
+1000
+1012
+1241
+1269
+1294
+1316
+1336
+1337
+1605
+1606
+1608
+1617
+1623
+1624
+1625
+1629
+1663
+1667
+1688
+1711
+8261
+8305
+8509
+8609
+9182
+9634
+9784

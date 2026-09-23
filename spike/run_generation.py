@@ -53,7 +53,7 @@ _args = _ap.parse_args()
 SOURCE = food_source.activate(_args.source)
 
 from engine import targets, split_meals, SafetyBlock                             # noqa: E402
-from filters import eligible, validate, pool_health, sample_for_prompt, resolve  # noqa: E402
+from filters import eligible, validate, pool_health, sample_for_prompt, resolve, FAT_FLOOR_PER_KG  # noqa: E402
 from portions import solve, feasible, describe                                   # noqa: E402
 from generator import generate                                                   # noqa: E402
 from profiles import PROFILES                                                    # noqa: E402
@@ -136,7 +136,7 @@ for i, (p, t, pool) in enumerate(runnable[:n], 1):
             _tr.append({"menu": menu, "info": None, "errs": ["EMPTY_MENU"]})
             return False, ["EMPTY_MENU"]
         mt = split_meals(_t, len(picks))
-        solved, _ok, _info = solve(picks, mt, _t)
+        solved, _ok, _info = solve(picks, mt, _t, fat_floor=_p.get("weight", 0) * FAT_FLOOR_PER_KG)
         for meal, sm in zip(menu, solved):
             meal["items"] = [{"food": f["name"], "grams": g} for f, g in sm]
         _verdict, _errs = validate(menu, _p, _t, _pool)

@@ -166,6 +166,11 @@ for i, (p, t, pool) in enumerate(runnable[:n], 1):
     # a menu that was rejected is the one worth reading, and it used to print
     # nothing at all.
     shown = menu if menu else (trace[-1]["menu"] if trace else None)
+    # An attempt the solver never reached (info is None - "solver did not run"
+    # below) still holds the model's raw names, and by[] would raise on them.
+    if _args.show_menu and menu is None and trace and trace[-1]["info"] is None:
+        print(f"        [REJECTED - stopped before the solver: {'; '.join(trace[-1]['errs'])}]")
+        shown = None
     if _args.show_menu and shown:
         if menu is None:
             print("        [REJECTED - last attempt, failed validation]")

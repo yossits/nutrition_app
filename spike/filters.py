@@ -1,3 +1,4 @@
+import random
 import re
 # -*- coding: utf-8 -*-
 """
@@ -142,9 +143,17 @@ def sample_for_prompt(pool, profile, per_cat=None):
     Vegans keep their full plant list - excluding lower-quality sources there
     would leave nothing to build from, and combining plant proteins across a
     day covers the amino acid profile anyway.
+
+    Every other category is sampled with a Random seeded by the profile id
+    (decisions.md 24.09.2026, step (b) of 9g). Until then it took items[:n] in
+    export order, and 09 orders by source_code, so 36 of 40 profiles got the
+    same six carbs. The draw is membership only - the chosen items keep their
+    export order - and the instance is local, so the global random stream the
+    profiles are drawn from does not move.
     """
     per_cat = per_cat or {"protein": 8, "carb": 6, "veg": 6, "fat": 4,
                           "fruit": 3, "drink": 2}
+    rng = random.Random(profile["id"])
     out = []
     for c, n in per_cat.items():
         items = [x for x in pool if x["cat"] == c]
@@ -156,6 +165,9 @@ def sample_for_prompt(pool, profile, per_cat=None):
             supps = sorted([x for x in items if x.get("supp")],
                            key=lambda x: -x.get("quality", 2))
             items = whole[:max(n - 1, 1)] + supps[:1]
+        else:
+            chosen = {id(x) for x in rng.sample(items, min(n, len(items)))}
+            items = [x for x in items if id(x) in chosen]
         out.extend(items[:n])
     return out
 

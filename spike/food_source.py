@@ -21,11 +21,22 @@ a bridge that forced an edit there would be a bridge built in the wrong place.
 ALL_ALLERGENS is deliberately NOT swapped. It is the vocabulary the synthetic
 test profiles draw allergies from, not a property of the food pool; keeping it
 fixed is what lets the same 100 profiles be posed to both paths.
+
+One label in that vocabulary is spelled differently in the export: the seed says
+"Eggs", v_menu_foods says "Egg" (open-questions.md #67). The filter matches
+labels as strings, so on the db path an egg allergy filtered nothing. activate("db")
+rewrites the label in the profiles through ALLERGEN_MAP. It imports profiles
+itself, right after the swap - the same point the callers' own import reached -
+and rewrites the labels only after the profiles are generated, so the PRNG
+stream and every other field stay as they are. The seed path is not touched.
 """
 
 SEED = "seed"
 DB = "db"
 CHOICES = (SEED, DB)
+
+# Seed-vocabulary label -> the label the export carries. One entry, by decision.
+ALLERGEN_MAP = {"Eggs": "Egg"}
 
 
 def add_argument(parser):
@@ -55,4 +66,11 @@ def activate(source):
             "Nothing is menu_eligible yet; curation is block 3d.")
 
     foods.FOODS[:] = menu_foods.FOODS
+
+    # Generated here, after the swap: profiles.py reads foods.FOODS for its
+    # dislike names at import time. The labels change after generation only.
+    import profiles
+    for p in profiles.PROFILES:
+        p["allergies"][:] = [ALLERGEN_MAP.get(a, a) for a in p["allergies"]]
+
     return f"db · spike/menu_foods.py · {len(foods.FOODS)} items"
